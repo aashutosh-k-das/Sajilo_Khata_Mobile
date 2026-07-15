@@ -84,3 +84,16 @@ Contributions are welcome. Feel free to open issues or submit pull requests for 
 ## License
 
 Add your project license here if you want to define how others can use the code.
+
+## Image 
+
+<img width="404" height="845" alt="Screenshot 2026-07-02 at 12 20 59 PM" src="https://github.com/user-attachments/assets/68c5ccd7-9098-4d3f-b66c-cc481ac038c4" />
+<img width="412" height="843" alt="Screenshot 2026-07-02 at 12 26 30 PM" src="https://github.com/user-attachments/assets/79f3545f-2f70-48a8-a6b9-28b6fcad9780" />
+<img width="417" height="846" alt="Screenshot 2026-07-02 at 12 26 45 PM" src="https://github.com/user-attachments/assets/6e5001f5-577c-47b0-abf0-a86ab2c07b25" />
+<img width="424" height="858" alt="Screenshot 2026-07-02 at 12 27 10 PM" src="https://github.com/user-attachments/assets/8c83e1bc-3db4-4e69-9dee-7feff12c10f7" />
+<img width="416" height="856" alt="Screenshot 2026-07-02 at 12 27 31 PM" src="https://github.com/user-attachments/assets/c601e4b3-d5c0-475b-9613-88b464097467" />
+<img width="411" height="851" alt="Screenshot 2026-07-02 at 12 27 40 PM" src="https://github.com/user-attachments/assets/f8cb5ba8-7cb4-46d3-9e1c-b5ff77916a98" />
+
+
+
+
