@@ -1,0 +1,15 @@
+node_modules/
+dist/
+firebase-debug.log
+.DS_Store
+
+# Flutter
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# IDE
+.idea/
+.vscode/

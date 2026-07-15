@@ -1,0 +1,46 @@
+name: sajilo_khata_mobile
+description: "A mobile-first offline-first digital khata ledger and billing app for MSMEs in Nepal."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local DB
+  sqflite: ^2.3.0
+  path: ^1.9.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+
+  # Cloud sync
+  firebase_core: ^2.27.0
+  cloud_firestore: ^4.15.8
+  firebase_auth: ^4.17.8
+
+  # Services & Utilities
+  http: ^1.2.0                # For Sparrow SMS API calls
+  url_launcher: ^6.2.5        # For opening WhatsApp bill sharing deep links
+  path_provider: ^2.1.2       # Local directory storage path info
+  google_fonts: ^6.1.0        # Noto Sans Devanagari styling font
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Font assets registration
+  fonts:
+    - family: NotoSansDevanagari
+      fonts:
+        - asset: assets/fonts/NotoSansDevanagari-Regular.ttf
+        - asset: assets/fonts/NotoSansDevanagari-Bold.ttf
+          weight: 700

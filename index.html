@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ne" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sajilo Khata — Easy Ledger for Nepal MSMEs</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- Mock Smartphone Frame Viewport -->
+  <div class="phone-container">
+    <div class="phone-notch"></div>
+    
+    <!-- Status Bar Simulation -->
+    <div class="status-bar">
+      <div id="simulated-time">18:45</div>
+      <div class="status-icons">
+        <div class="online-indicator" id="sync-status">
+          <span class="indicator-dot"></span>
+          <span id="sync-text">Online</span>
+        </div>
+        <span>📶</span>
+        <span>🔋</span>
+      </div>
+    </div>
+
+    <!-- App Header -->
+    <header class="app-header" id="app-header" style="display: none;">
+      <div class="app-branding">
+        <div class="logo-icon">स</div>
+        <div class="app-title" data-locale="appName">सजिलो खाता</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="toggle-lang" title="Toggle Language">🇳🇵</button>
+        <button class="btn-icon" id="toggle-theme" title="Toggle Theme">🌓</button>
+        <button class="btn-icon" id="logout-btn" title="Logout">🚪</button>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Application Screen Body -->
+    <main class="app-body">
+      
+      <!-- PAGE 0: AUTH / LOGIN (Bypassed if logged in) -->
+      <section class="page active" id="page-auth">
+        <div style="text-align: center; margin-top: 40px; display: flex; flex-direction: column; gap: 16px;">
+          <div class="logo-icon" style="width: 80px; height: 80px; font-size: 36px; border-radius: 24px; margin: 0 auto;">स</div>
+          <h2 style="color: var(--primary-color); font-weight: 700; font-size: 24px;" data-locale="appName">सजिलो खाता</h2>
+          <p style="font-size: 14px; color: var(--text-secondary);" data-locale="loginSubtitle">बिरगन्जका साना व्यवसायीहरूका लागि सजिलो डिजिटल खाता</p>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3 style="margin-bottom: 16px; font-size: 16px;" data-locale="loginTitle">मोबाईल नम्बर मार्फत लगइन</h3>
+          <form id="auth-phone-form">
+            <div class="form-group">
+              <label for="auth-phone" data-locale="phone">फोन नम्बर</label>
+              <input type="tel" id="auth-phone" class="form-control" placeholder="98XXXXXXXX" required pattern="^9[78]\d{8}$">
+            </div>
+            <button type="submit" class="btn-primary" data-locale="getOtp">OTP कोड पाउनुहोस्</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- PAGE 1: DASHBOARD / HOME -->
+      <section class="page" id="page-dashboard">
+        <!-- Metrics Cards -->
+        <div class="metrics-grid">
+          <div class="card card-sales">
+            <div class="card-title">
+              <span data-locale="todaySales">आजको बिक्री (रु.)</span>
+              <span>📈</span>
+            </div>
+            <div class="card-value" id="metric-sales">रु. 0</div>
+          </div>
+
+          <div class="card card-credit">
+            <div class="card-title">
+              <span data-locale="totalCredit">कुल उधारो (रु.)</span>
+              <span>💳</span>
+            </div>
+            <div class="card-value credit-owe" id="metric-credit">रु. 0</div>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="card" id="card-low-stock-trigger" style="cursor: pointer;">
+            <div class="card-title">
+              <span data-locale="lowStockItems">कम मौज्दात सामानहरू</span>
+              <span id="low-stock-alert-icon">🔔</span>
+            </div>
+            <div class="card-value" id="metric-low-stock">0</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span data-locale="activeCustomers">सक्रिय ग्राहकहरू</span>
+              <span>👥</span>
+            </div>
+            <div class="card-value" id="metric-customers">0</div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions-section">
+          <h3 class="section-header" data-locale="quickActions">द्रुत कार्यहरू</h3>
+          <div class="actions-row">
+            <button class="btn-action" id="action-new-sale">
+              <span style="font-size: 20px;">🧾</span>
+              <span data-locale="newSale">+ नयाँ बिल</span>
+            </button>
+            <button class="btn-action" id="action-new-product">
+              <span style="font-size: 20px;">📦</span>
+              <span data-locale="addProduct">+ नयाँ सामान</span>
+            </button>
+            <button class="btn-action" id="action-new-customer">
+              <span style="font-size: 20px;">👤</span>
+              <span data-locale="addCustomer">+ नयाँ ग्राहक</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div>
+          <h3 class="section-header" style="margin-bottom: 8px;" data-locale="history">लेनदेन इतिहास</h3>
+          <div class="list-container" id="dashboard-recent-list">
+            <!-- Populated via Javascript -->
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 2: BILLING / NEW SALE -->
+      <section class="page" id="page-billing">
+        <h2 style="font-size: 18px; font-weight: 700;" data-locale="newSale">+ नयाँ बिल</h2>
+        
+        <form id="billing-form" class="cart-builder">
+          <!-- Customer Selection -->
+          <div class="form-group">
+            <label for="bill-customer-select" data-locale="customer">ग्राहक</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="bill-customer-select" class="form-control" style="flex: 1;">
+                <option value="" data-locale="anonymousCustomer">नियमित ग्राहक (नाम बिना)</option>
+                <!-- Populated dynamically -->
+              </select>
+              <button type="button" class="btn-icon" id="btn-quick-add-customer" style="border-radius: 8px;">➕</button>
+            </div>
+          </div>
+
+          <!-- Add Item Row -->
+          <div class="card" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div class="form-group" style="margin: 0;">
+              <label for="bill-product-select" data-locale="selectItem">सामान छान्नुहोस्</label>
+              <select id="bill-product-select" class="form-control">
+                <option value="">-- छान्नुहोस् --</option>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <div class="form-group" style="flex: 1; margin: 0;">
+                <label for="bill-qty-input" data-locale="qty">मात्रा</label>
+                <input type="number" id="bill-qty-input" class="form-control" value="1" min="1">
+              </div>
+              <div class="form-group" style="flex: 1.5; margin: 0;">
+                <label for="bill-price-input" data-locale="price">दर (रु.)</label>
+                <input type="number" id="bill-price-input" class="form-control" placeholder="0">
+              </div>
+              <button type="button" class="btn-primary" id="btn-add-to-cart" style="align-self: flex-end; padding: 12px; width: 60px;">➕</button>
+            </div>
+          </div>
+
+          <!-- Cart Table -->
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th data-locale="productName">सामानको नाम</th>
+                  <th data-locale="qty">मात्रा</th>
+                  <th data-locale="price">दर</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="cart-table-body">
+                <!-- Cart items added dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Totals -->
+          <div class="cart-totals">
+            <div class="total-row">
+              <span data-locale="subtotal">जम्मा</span>
+              <span id="bill-subtotal">रु. 0.00</span>
+            </div>
+            <div class="total-row">
+              <span data-locale="vat">१३% भ्याट (VAT)</span>
+              <span id="bill-vat">रु. 0.00</span>
+            </div>
+            <div class="total-row grand">
+              <span data-locale="total">कुल जम्मा</span>
+              <span id="bill-total">रु. 0.00</span>
+            </div>
+          </div>
+
+          <!-- Payment Method -->
+          <div class="form-group">
+            <label data-locale="paymentMethod">भुक्तानी तरिका</label>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <label style="flex: 1; border: 1.5px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                <input type="radio" name="payment-method" value="cash" checked>
+                <span data-locale="cash">नगद</span>
+              </label>
+              <label style="flex: 1; border: 1.5px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" id="bill-credit-radio-wrapper">
+                <input type="radio" name="payment-method" value="credit">
+                <span data-locale="credit">उधारो</span>
+              </label>
+              <label style="flex: 1; border: 1.5px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                <input type="radio" name="payment-method" value="online">
+                <span data-locale="onlinePay">eSewa</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" style="margin-top: 10px;" data-locale="saveBill">बिल सुरक्षित गर्नुहोस्</button>
+        </form>
+      </section>
+
+      <!-- PAGE 3: INVENTORY -->
+      <section class="page" id="page-inventory">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 18px; font-weight: 700;" data-locale="inventory">मौज्दात (इन्भेन्टरी)</h2>
+          <button class="btn-icon" id="btn-inventory-add-product" title="Add Product">➕</button>
+        </div>
+
+        <!-- Search Bar -->
+        <input type="text" id="inventory-search" class="form-control" data-placeholder="searchProduct" placeholder="सामान खोज्नुहोस्...">
+
+        <!-- Products List -->
+        <div class="list-container" id="inventory-list" style="max-height: 480px;">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- PAGE 4: KHATA (CREDIT LEDGER) -->
+      <section class="page" id="page-khata">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 18px; font-weight: 700;" data-locale="khata">खाता (उधारो)</h2>
+          <button class="btn-icon" id="btn-khata-add-customer" title="Add Customer">➕</button>
+        </div>
+
+        <!-- Search Bar -->
+        <input type="text" id="khata-search" class="form-control" data-placeholder="searchCustomer" placeholder="ग्राहक खोज्नुहोस्...">
+
+        <!-- Customers Credit List -->
+        <div class="list-container" id="khata-list" style="max-height: 480px;">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Menu -->
+    <nav class="bottom-nav" id="app-nav" style="display: none;">
+      <div class="nav-item active" data-target="page-dashboard">
+        <span class="nav-icon">📊</span>
+        <span data-locale="dashboard">ड्यासबोर्ड</span>
+      </div>
+      <div class="nav-item" data-target="page-billing">
+        <span class="nav-icon">🧾</span>
+        <span data-locale="billing">बिलिङ</span>
+      </div>
+      <div class="nav-item" data-target="page-inventory">
+        <span class="nav-icon">📦</span>
+        <span data-locale="inventory">मौज्दात</span>
+      </div>
+      <div class="nav-item" data-target="page-khata">
+        <span class="nav-icon">👤</span>
+        <span data-locale="khata">खाता</span>
+      </div>
+    </nav>
+
+    <!-- Toast Notification Popup -->
+    <div class="toast" id="toast-message">सन्देश</div>
+
+  </div> <!-- End Phone Container -->
+
+
+  <!-- ==================== DIALOGS / MODALS ==================== -->
+
+  <!-- 1. OTP Verification Dialog -->
+  <dialog id="dialog-otp" closedby="any" aria-labelledby="otpTitle">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="otpTitle" data-locale="enterOtp">६-अङ्कको OTP कोड हाल्नुहोस्</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-otp').close()">✖</button>
+    </div>
+    <form id="otp-verify-form">
+      <div class="form-group">
+        <input type="text" id="otp-input" class="form-control" placeholder="123456" required pattern="^\d{6}$" style="text-align: center; letter-spacing: 12px; font-size: 22px;">
+      </div>
+      <p id="otp-mock-info" style="font-size: 11px; color: var(--warning-color); margin-bottom: 16px; text-align: center; line-height: 1.4;" data-locale="mockOtpSent"></p>
+      <button type="submit" class="btn-primary" data-locale="verifyOtp">कोड प्रमाणित गर्नुहोस्</button>
+    </form>
+  </dialog>
+
+  <!-- 2. Add Customer Dialog -->
+  <dialog id="dialog-add-customer" closedby="any" aria-labelledby="addCustTitle">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="addCustTitle" data-locale="addCustomer">नयाँ ग्राहक थप्नुहोस्</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-add-customer').close()">✖</button>
+    </div>
+    <form id="add-customer-form">
+      <div class="form-group">
+        <label for="cust-name-input" data-locale="name">नाम</label>
+        <input type="text" id="cust-name-input" class="form-control" required placeholder="उदा: राम परियार">
+      </div>
+      <div class="form-group">
+        <label for="cust-phone-input" data-locale="phone">फोन नम्बर</label>
+        <input type="tel" id="cust-phone-input" class="form-control" required placeholder="98XXXXXXXX" pattern="^9[78]\d{8}$">
+      </div>
+      <button type="submit" class="btn-primary" data-locale="add">थप्नुहोस्</button>
+    </form>
+  </dialog>
+
+  <!-- 3. Add Product Dialog -->
+  <dialog id="dialog-add-product" closedby="any" aria-labelledby="addProdTitle">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="addProdTitle" data-locale="addProduct">नयाँ सामान थप्नुहोस्</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-add-product').close()">✖</button>
+    </div>
+    <form id="add-product-form">
+      <div class="form-group">
+        <label for="prod-name-input" data-locale="productName">सामानको नाम</label>
+        <input type="text" id="prod-name-input" class="form-control" required placeholder="उदा: चामल १ बोरा">
+      </div>
+      <div class="form-group">
+        <label for="prod-category-input" data-locale="category">श्रेणी</label>
+        <select id="prod-category-input" class="form-control">
+          <option value="Groceries">खाद्यान्न (Groceries)</option>
+          <option value="Dairy">डेरी (Dairy)</option>
+          <option value="Tea & Sugar">चिया/चिनी (Tea & Sugar)</option>
+          <option value="Snacks">खाजा/बिस्कुट (Snacks)</option>
+          <option value="Other">अन्य (Other)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="prod-qty-input" data-locale="stockQty">मौज्दात मात्रा</label>
+        <input type="number" id="prod-qty-input" class="form-control" required min="0" value="10">
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <div class="form-group" style="flex: 1;">
+          <label for="prod-buying-input" data-locale="buyingPrice">खरीद दर</label>
+          <input type="number" id="prod-buying-input" class="form-control" required min="0" placeholder="0">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="prod-selling-input" data-locale="sellingPrice">बिक्री दर</label>
+          <input type="number" id="prod-selling-input" class="form-control" required min="0" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="prod-threshold-input" data-locale="minThreshold">कम मौज्दात चेतावनी सीमा</label>
+        <input type="number" id="prod-threshold-input" class="form-control" required min="1" value="3">
+      </div>
+      <button type="submit" class="btn-primary" data-locale="saveProduct">सामान थप्नुहोस्</button>
+    </form>
+  </dialog>
+
+  <!-- 4. Customer Details & Ledger Dialog -->
+  <dialog id="dialog-customer-detail" closedby="any" aria-labelledby="custDetailTitle" style="max-width: 380px;">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="custDetailTitle">राम परियार</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-customer-detail').close()">✖</button>
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <!-- Customer Info & Balance -->
+      <div class="card" style="padding: 12px; display: flex; justify-content: space-between; align-items: center; background-color: var(--primary-bg);">
+        <div>
+          <span style="font-size: 12px; color: var(--text-secondary);" data-locale="netBalance">बाँकी रकम</span>
+          <div class="card-value" style="font-size: 22px; color: var(--primary-color);" id="detail-customer-balance">रु. 0</div>
+        </div>
+        <button class="btn-primary" id="btn-send-sms-reminder" style="width: auto; padding: 8px 12px; font-size: 11px;" data-locale="sendReminder">SMS पठाउनुहोस्</button>
+      </div>
+
+      <!-- Ledger Action Forms -->
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-primary" id="btn-ledger-give-credit" style="background-color: var(--danger-color); font-size: 12px; padding: 10px;" data-locale="giveCredit">उधारो दिनुहोस्</button>
+        <button class="btn-primary" id="btn-ledger-receive-pay" style="background-color: var(--success-color); font-size: 12px; padding: 10px;" data-locale="receivePayment">रकम प्राप्त गर्नुहोस्</button>
+      </div>
+
+      <!-- Ledger Entries Timeline -->
+      <div>
+        <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 6px;" data-locale="history">लेनदेन इतिहास</h4>
+        <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" id="detail-ledger-timeline">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 5. Give/Receive Ledger Transaction Form Dialog -->
+  <dialog id="dialog-ledger-transaction" closedby="any" aria-labelledby="ledgerTxTitle">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="ledgerTxTitle">उधारो / भुक्तानी थप्नुहोस्</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-ledger-transaction').close()">✖</button>
+    </div>
+    <form id="ledger-transaction-form">
+      <input type="hidden" id="ledger-tx-type" value="credit">
+      <div class="form-group">
+        <label for="ledger-amount-input" data-locale="amount">रकम</label>
+        <input type="number" id="ledger-amount-input" class="form-control" required placeholder="0" min="1">
+      </div>
+      <div class="form-group">
+        <label for="ledger-desc-input" data-locale="description">विवरण</label>
+        <input type="text" id="ledger-desc-input" class="form-control" placeholder="उदा: चिनी र साबुन खरीद्">
+      </div>
+      <button type="submit" class="btn-primary" data-locale="save">सुरक्षित गर्नुहोस्</button>
+    </form>
+  </dialog>
+
+  <!-- 6. Sparrow SMS Preview / Simulated Dispatch -->
+  <dialog id="dialog-sms-preview" closedby="any" aria-labelledby="smsPreviewTitle">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="smsPreviewTitle" data-locale="smsPreview">पठाइने SMS सन्देश:</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-sms-preview').close()">✖</button>
+    </div>
+    <div class="sms-body-preview" id="sms-text-box">...</div>
+    <div class="sms-receipt">
+      <div>API Endpoint: <code>https://api.sparrowsms.com/v2/sms/</code></div>
+      <div>Credits consumed: 1 SMS credit</div>
+    </div>
+    <button class="btn-primary" style="margin-top: 16px;" id="btn-sms-confirm-send" data-locale="sendReminder">SMS पठाउनुहोस्</button>
+  </dialog>
+
+  <!-- 7. QR Online Payment Modal -->
+  <dialog id="dialog-online-qr" closedby="any" aria-labelledby="qrTitle">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="qrTitle">Fonepay QR Code</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-online-qr').close()">✖</button>
+    </div>
+    <div class="qr-container">
+      <div class="qr-placeholder">
+        <div style="font-size: 32px; margin-bottom: 6px;">🎯</div>
+        <strong>सजिलो खाता QR</strong><br>
+        <span style="font-size: 10px; color: var(--text-secondary);">Birgunj MSME merchant ID: 88923</span>
+      </div>
+      <p style="font-size: 11px; text-align: center; color: var(--text-secondary);">Scan using Fonepay, eSewa, or any Nepalese Bank App.</p>
+    </div>
+  </dialog>
+
+  <!-- 8. Invoice Details Modal (Receipt) -->
+  <dialog id="dialog-invoice-receipt" closedby="any" aria-labelledby="receiptTitle" style="max-width: 360px;">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="receiptTitle">Invoice Receipt</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-invoice-receipt').close()">✖</button>
+    </div>
+    
+    <div id="receipt-content" style="font-family: monospace; font-size: 12px; background-color: #fff; padding: 12px; border: 1px solid var(--border-color); color: #000; border-radius: 4px;">
+      <!-- Populated dynamically -->
+    </div>
+    
+    <div style="display: flex; gap: 8px; margin-top: 16px;">
+      <button class="btn-primary" id="btn-invoice-whatsapp" style="background-color: #25D366;">
+        WhatsApp Share
+      </button>
+      <button class="btn-primary" id="btn-invoice-print" style="background-color: var(--text-primary); max-width: 90px;">
+        Print
+      </button>
+    </div>
+  </dialog>
+
+  <!-- 9. Product Stock Adjust Dialog -->
+  <dialog id="dialog-adjust-stock" closedby="any" aria-labelledby="adjustTitle">
+    <div class="dialog-header">
+      <h3 class="dialog-title" id="adjustTitle" data-locale="editStock">मौज्दात सम्पादन</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-adjust-stock').close()">✖</button>
+    </div>
+    <form id="adjust-stock-form">
+      <input type="hidden" id="adjust-product-id">
+      <div class="form-group">
+        <label id="adjust-product-name" style="font-weight: bold;"></label>
+      </div>
+      <div class="form-group">
+        <label for="adjust-qty-input" data-locale="currentStock">हालको मौज्दात</label>
+        <input type="number" id="adjust-qty-input" class="form-control" required min="0">
+      </div>
+      <button type="submit" class="btn-primary" data-locale="updateStock">मौज्दात अपडेट</button>
+    </form>
+  </dialog>
+
+
+  <!-- ==================== DEV CONTROL PANEL ==================== -->
+  <div class="dev-control-panel">
+    <div class="dev-panel-title">
+      <span>⚙️ DEMO CONTROLS</span>
+      <span style="font-size: 9px; opacity: 0.6;">v1.0</span>
+    </div>
+    <div class="dev-row">
+      <span>Status:</span>
+      <button class="btn-dev" id="dev-btn-network">Toggle Offline</button>
+    </div>
+    <div class="dev-row">
+      <span>Firebase Sync:</span>
+      <button class="btn-dev" id="dev-btn-sync">Trigger Sync</button>
+    </div>
+    <div class="dev-row">
+      <span>Database:</span>
+      <button class="btn-dev" id="dev-btn-reset" style="background-color: var(--danger-color);">Reset Data</button>
+    </div>
+    <div style="font-size: 8px; color: #94A3B8; text-align: center; border-top: 1px solid #334155; padding-top: 4px; margin-top: 4px;">
+      Offline-First simulator & Sparrow SMS payload debugger
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
