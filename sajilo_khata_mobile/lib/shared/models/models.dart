@@ -31,6 +31,9 @@ class InventoryItem {
     };
   }
 
+  bool get isLowStock => stockQty <= minThreshold;
+  bool get isOutOfStock => stockQty <= 0;
+
   factory InventoryItem.fromMap(Map<String, dynamic> map) {
     return InventoryItem(
       id: map['id'] as int?,
@@ -77,11 +80,13 @@ class Customer {
 }
 
 class CartItem {
+  final int? productId;
   final String name;
   final int qty;
   final double price;
 
   CartItem({
+    this.productId,
     required this.name,
     required this.qty,
     required this.price,
@@ -89,12 +94,21 @@ class CartItem {
 
   double get total => qty * price;
 
-  Map<String, dynamic> toMap() => {'name': name, 'qty': qty, 'price': price};
+  CartItem copyWith({int? qty}) => CartItem(
+      productId: productId, name: name, qty: qty ?? this.qty, price: price);
+
+  Map<String, dynamic> toMap() => {
+        if (productId != null) 'productId': productId,
+        'name': name,
+        'qty': qty,
+        'price': price,
+      };
   factory CartItem.fromMap(Map<String, dynamic> map) => CartItem(
-    name: map['name'] as String,
-    qty: map['qty'] as int,
-    price: (map['price'] as num).toDouble(),
-  );
+        productId: map['productId'] as int?,
+        name: map['name'] as String,
+        qty: map['qty'] as int,
+        price: (map['price'] as num).toDouble(),
+      );
 }
 
 class Bill {
@@ -139,11 +153,13 @@ class Bill {
 
   factory Bill.fromMap(Map<String, dynamic> map) {
     final list = jsonDecode(map['itemsJson'] as String) as List;
-    final items = list.map((e) => CartItem.fromMap(e as Map<String, dynamic>)).toList();
-    
+    final items =
+        list.map((e) => CartItem.fromMap(e as Map<String, dynamic>)).toList();
+
     return Bill(
       id: map['id'] as int?,
-      customerId: map['customerId'] != null ? int.tryParse(map['customerId']) : null,
+      customerId:
+          map['customerId'] != null ? int.tryParse(map['customerId']) : null,
       customerName: map['customerName'] as String,
       items: items,
       subtotal: (map['subtotal'] as num).toDouble(),
@@ -198,4 +214,20 @@ class KhataTransaction {
       syncStatus: map['syncStatus'] as int,
     );
   }
+}
+
+class DashboardMetrics {
+  final double todaySales;
+  final double totalCredit; // Sum of positive customer balances
+  final int lowStockCount;
+  final int activeCustomers;
+  final int pendingSync;
+
+  const DashboardMetrics({
+    required this.todaySales,
+    required this.totalCredit,
+    required this.lowStockCount,
+    required this.activeCustomers,
+    required this.pendingSync,
+  });
 }

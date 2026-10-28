@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Each shop owner can only read and write their own synced data
+    match /shops/{uid}/{collection}/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid
+        && collection in ['bills', 'transactions', 'customers', 'inventory'];
+    }
+    // Login records are append-only (each one triggers the sign-in email)
+    match /shops/{uid}/logins/{loginId} {
+      allow create: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

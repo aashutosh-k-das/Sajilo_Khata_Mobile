@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -7,6 +8,16 @@ class DatabaseHelper {
   static Database? _database;
 
   DatabaseHelper._init();
+
+  /// Opens an in-memory database through [factory] with the production schema.
+  @visibleForTesting
+  static Future<void> openForTesting(DatabaseFactory factory) async {
+    await _database?.close();
+    _database = await factory.openDatabase(
+      inMemoryDatabasePath,
+      options: OpenDatabaseOptions(version: 1, onCreate: instance._createDB),
+    );
+  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -88,7 +99,8 @@ class DatabaseHelper {
   // Common operations helpers
   Future<int> insert(String table, Map<String, dynamic> row) async {
     final db = await instance.database;
-    return await db.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(table, row,
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> queryAll(String table) async {
@@ -96,7 +108,8 @@ class DatabaseHelper {
     return await db.query(table);
   }
 
-  Future<int> update(String table, Map<String, dynamic> row, String idColumn, dynamic idVal) async {
+  Future<int> update(String table, Map<String, dynamic> row, String idColumn,
+      dynamic idVal) async {
     final db = await instance.database;
     return await db.update(
       table,

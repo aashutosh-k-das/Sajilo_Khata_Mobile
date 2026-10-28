@@ -87,12 +87,14 @@ export const locales = {
     search: "खोज्नुहोस्",
     
     // Auth
-    loginTitle: "मोबाईल नम्बर मार्फत लगइन",
+    loginTitle: "लगइन गर्नुहोस्",
     loginSubtitle: "बिरगन्जका साना व्यवसायीहरूका लागि सजिलो डिजिटल खाता",
     getOtp: "OTP कोड पाउनुहोस्",
     verifyOtp: "कोड प्रमाणित गर्नुहोस्",
     enterOtp: "६-अङ्कको OTP कोड हाल्नुहोस्",
-    mockOtpSent: "तपाईंको नम्बरमा OTP पठाइएको छ! (विकासकर्ता परीक्षणको लागि ६-अङ्क: १२३४५६ प्रयोग गर्नुहोस्)"
+    mockOtpSent: "तपाईंको नम्बरमा OTP पठाइएको छ! (विकासकर्ता परीक्षणको लागि ६-अङ्क: १२३४५६ प्रयोग गर्नुहोस्)",
+    or: "वा",
+    loginGmail: "Gmail बाट लगइन गर्नुहोस्"
   },
   en: {
     appName: "Sajilo Khata",
@@ -181,11 +183,13 @@ export const locales = {
     search: "Search",
 
     // Auth
-    loginTitle: "Login via Mobile Number",
+    loginTitle: "Login",
     loginSubtitle: "Simple digital khata ledger for MSMEs in Birgunj",
     getOtp: "Get OTP Code",
     verifyOtp: "Verify Code",
     enterOtp: "Enter 6-digit OTP code",
-    mockOtpSent: "OTP sent to your number! (For testing, use code: 123456)"
+    mockOtpSent: "OTP sent to your number! (For testing, use code: 123456)",
+    or: "OR",
+    loginGmail: "Login with Gmail"
   }
 };

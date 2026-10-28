@@ -13,34 +13,33 @@ dependencies:
 
   # Local DB
   sqflite: ^2.3.0
+  sqflite_common_ffi_web: ^0.4.5  # SQLite (wasm) backend when running in a browser
   path: ^1.9.0
 
   # State Management
   flutter_riverpod: ^2.5.1
 
   # Cloud sync
-  firebase_core: ^2.27.0
-  cloud_firestore: ^4.15.8
-  firebase_auth: ^4.17.8
+  firebase_core: ^5.1.0
+  cloud_firestore: ^7.1.0
+  firebase_auth: ^7.0.1
 
   # Services & Utilities
   http: ^1.2.0                # For Sparrow SMS API calls
   url_launcher: ^6.2.5        # For opening WhatsApp bill sharing deep links
   path_provider: ^2.1.2       # Local directory storage path info
   google_fonts: ^6.1.0        # Noto Sans Devanagari styling font
+  shared_preferences: ^2.2.2  # Local session & language persistence
+  intl: ^0.19.0               # Date formatting
+  google_sign_in: ^7.2.0
+  flutter_facebook_auth: ^7.3.2
+  crypto: ^3.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  sqflite_common_ffi: ^2.3.3  # In-memory SQLite for repository tests
 
 flutter:
   uses-material-design: true
-
-  # Font assets registration
-  fonts:
-    - family: NotoSansDevanagari
-      fonts:
-        - asset: assets/fonts/NotoSansDevanagari-Regular.ttf
-        - asset: assets/fonts/NotoSansDevanagari-Bold.ttf
-          weight: 700

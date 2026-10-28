@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sajilo Khata — Easy Ledger for Nepal MSMEs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&display=block">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -29,12 +31,15 @@
     <header class="app-header" id="app-header" style="display: none;">
       <div class="app-branding">
         <div class="logo-icon">स</div>
-        <div class="app-title" data-locale="appName">सजिलो खाता</div>
+        <div>
+          <div class="app-title" data-locale="appName">सजिलो खाता</div>
+          <div id="user-greeting" class="user-greeting"></div>
+        </div>
       </div>
       <div class="header-actions">
-        <button class="btn-icon" id="toggle-lang" title="Toggle Language">🇳🇵</button>
-        <button class="btn-icon" id="toggle-theme" title="Toggle Theme">🌓</button>
-        <button class="btn-icon" id="logout-btn" title="Logout">🚪</button>
+        <button class="btn-icon" id="toggle-lang" title="Toggle Language"><span class="mi">translate</span></button>
+        <button class="btn-icon" id="toggle-theme" title="Toggle Theme"><span class="mi">dark_mode</span></button>
+        <button class="btn-icon" id="logout-btn" title="Logout"><span class="mi">logout</span></button>
       </div>
     </header>
 
@@ -43,60 +48,69 @@
       
       <!-- PAGE 0: AUTH / LOGIN (Bypassed if logged in) -->
       <section class="page active" id="page-auth">
-        <div style="text-align: center; margin-top: 40px; display: flex; flex-direction: column; gap: 16px;">
-          <div class="logo-icon" style="width: 80px; height: 80px; font-size: 36px; border-radius: 24px; margin: 0 auto;">स</div>
-          <h2 style="color: var(--primary-color); font-weight: 700; font-size: 24px;" data-locale="appName">सजिलो खाता</h2>
-          <p style="font-size: 14px; color: var(--text-secondary);" data-locale="loginSubtitle">बिरगन्जका साना व्यवसायीहरूका लागि सजिलो डिजिटल खाता</p>
+        <div class="auth-hero">
+          <div class="logo-icon logo-hero">स</div>
+          <h2 data-locale="appName">सजिलो खाता</h2>
+          <p data-locale="loginSubtitle">बिरगन्जका साना व्यवसायीहरूका लागि सजिलो डिजिटल खाता</p>
         </div>
 
-        <div class="card" style="margin-top: 20px;">
-          <h3 style="margin-bottom: 16px; font-size: 16px;" data-locale="loginTitle">मोबाईल नम्बर मार्फत लगइन</h3>
+        <div class="card auth-card">
+          <h3 class="auth-title" data-locale="loginTitle">लगइन गर्नुहोस्</h3>
+          
           <form id="auth-phone-form">
             <div class="form-group">
               <label for="auth-phone" data-locale="phone">फोन नम्बर</label>
-              <input type="tel" id="auth-phone" class="form-control" placeholder="98XXXXXXXX" required pattern="^9[78]\d{8}$">
+              <div class="phone-input">
+                <span class="phone-prefix">🇳🇵 +977</span>
+                <input type="tel" id="auth-phone" class="form-control" placeholder="98XXXXXXXX" required pattern="^9[78]\d{8}$">
+              </div>
             </div>
             <button type="submit" class="btn-primary" data-locale="getOtp">OTP कोड पाउनुहोस्</button>
           </form>
+
+          <div class="divider-or"><span data-locale="or">वा</span></div>
+
+          <button type="button" id="auth-gmail-btn" class="btn-outline">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            <span data-locale="loginGmail">Gmail बाट लगइन गर्नुहोस्</span>
+          </button>
         </div>
+        <p class="secure-note"><span class="mi">lock</span> तपाईंको डाटा सुरक्षित छ</p>
       </section>
 
       <!-- PAGE 1: DASHBOARD / HOME -->
       <section class="page" id="page-dashboard">
-        <!-- Metrics Cards -->
-        <div class="metrics-grid">
-          <div class="card card-sales">
-            <div class="card-title">
-              <span data-locale="todaySales">आजको बिक्री (रु.)</span>
-              <span>📈</span>
-            </div>
-            <div class="card-value" id="metric-sales">रु. 0</div>
+        <!-- Summary hero -->
+        <div class="hero-card">
+          <div class="hero-top">
+            <span class="hero-greeting">नमस्ते 🙏</span>
+            <span class="hero-date" id="hero-date"></span>
           </div>
-
-          <div class="card card-credit">
-            <div class="card-title">
-              <span data-locale="totalCredit">कुल उधारो (रु.)</span>
-              <span>💳</span>
+          <div class="hero-label" data-locale="todaySales">आजको बिक्री (रु.)</div>
+          <div class="hero-value" id="metric-sales">रु. 0</div>
+          <div class="hero-chip">
+            <span class="mi">account_balance_wallet</span>
+            <div>
+              <div class="hero-chip-label" data-locale="totalCredit">कुल उधारो (रु.)</div>
+              <div class="hero-chip-value" id="metric-credit">रु. 0</div>
             </div>
-            <div class="card-value credit-owe" id="metric-credit">रु. 0</div>
           </div>
         </div>
 
         <div class="metrics-grid">
-          <div class="card" id="card-low-stock-trigger" style="cursor: pointer;">
-            <div class="card-title">
-              <span data-locale="lowStockItems">कम मौज्दात सामानहरू</span>
-              <span id="low-stock-alert-icon">🔔</span>
+          <div class="stat-tile" id="card-low-stock-trigger">
+            <span class="icon-badge tone-amber" id="low-stock-alert-icon"><span class="mi">warning</span></span>
+            <div>
+              <div class="stat-value" id="metric-low-stock">0</div>
+              <div class="stat-label" data-locale="lowStockItems">कम मौज्दात सामानहरू</div>
             </div>
-            <div class="card-value" id="metric-low-stock">0</div>
           </div>
-
-          <div class="card">
-            <div class="card-title">
-              <span data-locale="activeCustomers">सक्रिय ग्राहकहरू</span>
-              <span>👥</span>
+          <div class="stat-tile">
+            <span class="icon-badge tone-blue"><span class="mi">groups</span></span>
+            <div>
+              <div class="stat-value" id="metric-customers">0</div>
+              <div class="stat-label" data-locale="activeCustomers">सक्रिय ग्राहकहरू</div>
             </div>
-            <div class="card-value" id="metric-customers">0</div>
           </div>
         </div>
 
@@ -105,15 +119,15 @@
           <h3 class="section-header" data-locale="quickActions">द्रुत कार्यहरू</h3>
           <div class="actions-row">
             <button class="btn-action" id="action-new-sale">
-              <span style="font-size: 20px;">🧾</span>
+              <span class="icon-badge tone-green"><span class="mi">point_of_sale</span></span>
               <span data-locale="newSale">+ नयाँ बिल</span>
             </button>
             <button class="btn-action" id="action-new-product">
-              <span style="font-size: 20px;">📦</span>
+              <span class="icon-badge tone-violet"><span class="mi">add_box</span></span>
               <span data-locale="addProduct">+ नयाँ सामान</span>
             </button>
             <button class="btn-action" id="action-new-customer">
-              <span style="font-size: 20px;">👤</span>
+              <span class="icon-badge tone-amber"><span class="mi">person_add</span></span>
               <span data-locale="addCustomer">+ नयाँ ग्राहक</span>
             </button>
           </div>
@@ -121,7 +135,7 @@
 
         <!-- Recent Transactions -->
         <div>
-          <h3 class="section-header" style="margin-bottom: 8px;" data-locale="history">लेनदेन इतिहास</h3>
+          <h3 class="section-header" data-locale="history">लेनदेन इतिहास</h3>
           <div class="list-container" id="dashboard-recent-list">
             <!-- Populated via Javascript -->
           </div>
@@ -130,7 +144,7 @@
 
       <!-- PAGE 2: BILLING / NEW SALE -->
       <section class="page" id="page-billing">
-        <h2 style="font-size: 18px; font-weight: 700;" data-locale="newSale">+ नयाँ बिल</h2>
+        <h2 class="page-title" data-locale="newSale">+ नयाँ बिल</h2>
         
         <form id="billing-form" class="cart-builder">
           <!-- Customer Selection -->
@@ -141,12 +155,12 @@
                 <option value="" data-locale="anonymousCustomer">नियमित ग्राहक (नाम बिना)</option>
                 <!-- Populated dynamically -->
               </select>
-              <button type="button" class="btn-icon" id="btn-quick-add-customer" style="border-radius: 8px;">➕</button>
+              <button type="button" class="btn-icon btn-tonal" id="btn-quick-add-customer"><span class="mi">person_add</span></button>
             </div>
           </div>
 
           <!-- Add Item Row -->
-          <div class="card" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div class="card item-entry">
             <div class="form-group" style="margin: 0;">
               <label for="bill-product-select" data-locale="selectItem">सामान छान्नुहोस्</label>
               <select id="bill-product-select" class="form-control">
@@ -163,7 +177,7 @@
                 <label for="bill-price-input" data-locale="price">दर (रु.)</label>
                 <input type="number" id="bill-price-input" class="form-control" placeholder="0">
               </div>
-              <button type="button" class="btn-primary" id="btn-add-to-cart" style="align-self: flex-end; padding: 12px; width: 60px;">➕</button>
+              <button type="button" class="btn-primary btn-square" id="btn-add-to-cart" title="Add"><span class="mi">add_shopping_cart</span></button>
             </div>
           </div>
 
@@ -203,54 +217,57 @@
           <!-- Payment Method -->
           <div class="form-group">
             <label data-locale="paymentMethod">भुक्तानी तरिका</label>
-            <div style="display: flex; gap: 8px; margin-top: 4px;">
-              <label style="flex: 1; border: 1.5px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+            <div class="pay-options">
+              <label class="pay-option">
                 <input type="radio" name="payment-method" value="cash" checked>
+                <span class="mi">payments</span>
                 <span data-locale="cash">नगद</span>
               </label>
-              <label style="flex: 1; border: 1.5px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" id="bill-credit-radio-wrapper">
+              <label class="pay-option" id="bill-credit-radio-wrapper">
                 <input type="radio" name="payment-method" value="credit">
+                <span class="mi">menu_book</span>
                 <span data-locale="credit">उधारो</span>
               </label>
-              <label style="flex: 1; border: 1.5px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+              <label class="pay-option">
                 <input type="radio" name="payment-method" value="online">
+                <span class="mi">qr_code_2</span>
                 <span data-locale="onlinePay">eSewa</span>
               </label>
             </div>
           </div>
 
-          <button type="submit" class="btn-primary" style="margin-top: 10px;" data-locale="saveBill">बिल सुरक्षित गर्नुहोस्</button>
+          <button type="submit" class="btn-primary btn-lg" data-locale="saveBill">बिल सुरक्षित गर्नुहोस्</button>
         </form>
       </section>
 
       <!-- PAGE 3: INVENTORY -->
       <section class="page" id="page-inventory">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="font-size: 18px; font-weight: 700;" data-locale="inventory">मौज्दात (इन्भेन्टरी)</h2>
-          <button class="btn-icon" id="btn-inventory-add-product" title="Add Product">➕</button>
+        <div class="page-head">
+          <h2 class="page-title" data-locale="inventory">मौज्दात (इन्भेन्टरी)</h2>
+          <button class="btn-icon btn-tonal" id="btn-inventory-add-product" title="Add Product"><span class="mi">add</span></button>
         </div>
 
         <!-- Search Bar -->
-        <input type="text" id="inventory-search" class="form-control" data-placeholder="searchProduct" placeholder="सामान खोज्नुहोस्...">
+        <input type="search" id="inventory-search" class="form-control search-input" data-placeholder="searchProduct" placeholder="सामान खोज्नुहोस्...">
 
         <!-- Products List -->
-        <div class="list-container" id="inventory-list" style="max-height: 480px;">
+        <div class="list-container" id="inventory-list">
           <!-- Populated dynamically -->
         </div>
       </section>
 
       <!-- PAGE 4: KHATA (CREDIT LEDGER) -->
       <section class="page" id="page-khata">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="font-size: 18px; font-weight: 700;" data-locale="khata">खाता (उधारो)</h2>
-          <button class="btn-icon" id="btn-khata-add-customer" title="Add Customer">➕</button>
+        <div class="page-head">
+          <h2 class="page-title" data-locale="khata">खाता (उधारो)</h2>
+          <button class="btn-icon btn-tonal" id="btn-khata-add-customer" title="Add Customer"><span class="mi">person_add</span></button>
         </div>
 
         <!-- Search Bar -->
-        <input type="text" id="khata-search" class="form-control" data-placeholder="searchCustomer" placeholder="ग्राहक खोज्नुहोस्...">
+        <input type="search" id="khata-search" class="form-control search-input" data-placeholder="searchCustomer" placeholder="ग्राहक खोज्नुहोस्...">
 
         <!-- Customers Credit List -->
-        <div class="list-container" id="khata-list" style="max-height: 480px;">
+        <div class="list-container" id="khata-list">
           <!-- Populated dynamically -->
         </div>
       </section>
@@ -260,19 +277,19 @@
     <!-- Bottom Navigation Menu -->
     <nav class="bottom-nav" id="app-nav" style="display: none;">
       <div class="nav-item active" data-target="page-dashboard">
-        <span class="nav-icon">📊</span>
+        <span class="nav-icon mi">space_dashboard</span>
         <span data-locale="dashboard">ड्यासबोर्ड</span>
       </div>
       <div class="nav-item" data-target="page-billing">
-        <span class="nav-icon">🧾</span>
+        <span class="nav-icon mi">receipt_long</span>
         <span data-locale="billing">बिलिङ</span>
       </div>
       <div class="nav-item" data-target="page-inventory">
-        <span class="nav-icon">📦</span>
+        <span class="nav-icon mi">inventory_2</span>
         <span data-locale="inventory">मौज्दात</span>
       </div>
       <div class="nav-item" data-target="page-khata">
-        <span class="nav-icon">👤</span>
+        <span class="nav-icon mi">account_balance_wallet</span>
         <span data-locale="khata">खाता</span>
       </div>
     </nav>
@@ -285,11 +302,47 @@
 
   <!-- ==================== DIALOGS / MODALS ==================== -->
 
+  <!-- 0. Google Auth Dialog -->
+  <dialog id="dialog-google-auth" closedby="any" aria-labelledby="googleAuthTitle" style="max-width: 320px; border-radius: 16px;">
+    <div class="dialog-header" style="border-bottom: none; justify-content: center; position: relative;">
+      <h3 class="dialog-title" id="googleAuthTitle" style="font-size: 18px;">Choose an account</h3>
+      <button class="btn-icon" onclick="document.getElementById('dialog-google-auth').close()" style="position: absolute; right: 0;"><span class="mi">close</span></button>
+    </div>
+    <div style="text-align: center; margin-bottom: 24px; color: var(--text-secondary); font-size: 14px;">
+      to continue to <strong style="color: var(--text-primary);">Sajilo Khata</strong>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;" id="mock-google-accounts">
+      <div class="list-item" style="cursor: pointer; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px;" data-email="ramesh.parsa@gmail.com">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #4285F4; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">R</div>
+        <div style="flex: 1; text-align: left;">
+          <div style="font-weight: 600; font-size: 14px;">Ramesh Parsa</div>
+          <div style="font-size: 11px; color: var(--text-secondary);">ramesh.parsa@gmail.com</div>
+        </div>
+      </div>
+      <div class="list-item" style="cursor: pointer; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px;" data-email="sita.devi@gmail.com">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #EA4335; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">S</div>
+        <div style="flex: 1; text-align: left;">
+          <div style="font-weight: 600; font-size: 14px;">Sita Devi</div>
+          <div style="font-size: 11px; color: var(--text-secondary);">sita.devi@gmail.com</div>
+        </div>
+      </div>
+      <div class="list-item" id="btn-mock-another-account" style="cursor: pointer; border: 1px solid var(--border-color); border-radius: 8px; justify-content: flex-start; align-items: center; padding: 12px;">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #f1f3f4; color: #444; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="#444"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+        </div>
+        <div style="font-weight: 600; font-size: 14px; color: #444;">Use another account</div>
+      </div>
+    </div>
+    <div style="text-align: center; margin-top: 24px; font-size: 11px; color: var(--text-secondary);">
+      To create an account, Google will share your name and email address with Sajilo Khata.
+    </div>
+  </dialog>
+
   <!-- 1. OTP Verification Dialog -->
   <dialog id="dialog-otp" closedby="any" aria-labelledby="otpTitle">
     <div class="dialog-header">
       <h3 class="dialog-title" id="otpTitle" data-locale="enterOtp">६-अङ्कको OTP कोड हाल्नुहोस्</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-otp').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-otp').close()"><span class="mi">close</span></button>
     </div>
     <form id="otp-verify-form">
       <div class="form-group">
@@ -304,7 +357,7 @@
   <dialog id="dialog-add-customer" closedby="any" aria-labelledby="addCustTitle">
     <div class="dialog-header">
       <h3 class="dialog-title" id="addCustTitle" data-locale="addCustomer">नयाँ ग्राहक थप्नुहोस्</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-add-customer').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-add-customer').close()"><span class="mi">close</span></button>
     </div>
     <form id="add-customer-form">
       <div class="form-group">
@@ -323,7 +376,7 @@
   <dialog id="dialog-add-product" closedby="any" aria-labelledby="addProdTitle">
     <div class="dialog-header">
       <h3 class="dialog-title" id="addProdTitle" data-locale="addProduct">नयाँ सामान थप्नुहोस्</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-add-product').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-add-product').close()"><span class="mi">close</span></button>
     </div>
     <form id="add-product-form">
       <div class="form-group">
@@ -366,29 +419,27 @@
   <dialog id="dialog-customer-detail" closedby="any" aria-labelledby="custDetailTitle" style="max-width: 380px;">
     <div class="dialog-header">
       <h3 class="dialog-title" id="custDetailTitle">राम परियार</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-customer-detail').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-customer-detail').close()"><span class="mi">close</span></button>
     </div>
     
     <div style="display: flex; flex-direction: column; gap: 12px;">
       <!-- Customer Info & Balance -->
-      <div class="card" style="padding: 12px; display: flex; justify-content: space-between; align-items: center; background-color: var(--primary-bg);">
-        <div>
-          <span style="font-size: 12px; color: var(--text-secondary);" data-locale="netBalance">बाँकी रकम</span>
-          <div class="card-value" style="font-size: 22px; color: var(--primary-color);" id="detail-customer-balance">रु. 0</div>
-        </div>
-        <button class="btn-primary" id="btn-send-sms-reminder" style="width: auto; padding: 8px 12px; font-size: 11px;" data-locale="sendReminder">SMS पठाउनुहोस्</button>
+      <div class="hero-card hero-compact">
+        <div class="hero-label" data-locale="netBalance">बाँकी रकम</div>
+        <div class="hero-value" id="detail-customer-balance">रु. 0</div>
+        <button class="btn-hero" id="btn-send-sms-reminder" data-locale="sendReminder">SMS पठाउनुहोस्</button>
       </div>
 
       <!-- Ledger Action Forms -->
-      <div style="display: flex; gap: 8px;">
-        <button class="btn-primary" id="btn-ledger-give-credit" style="background-color: var(--danger-color); font-size: 12px; padding: 10px;" data-locale="giveCredit">उधारो दिनुहोस्</button>
-        <button class="btn-primary" id="btn-ledger-receive-pay" style="background-color: var(--success-color); font-size: 12px; padding: 10px;" data-locale="receivePayment">रकम प्राप्त गर्नुहोस्</button>
+      <div class="btn-row">
+        <button class="btn-primary btn-danger" id="btn-ledger-give-credit" data-locale="giveCredit">उधारो दिनुहोस्</button>
+        <button class="btn-primary btn-success" id="btn-ledger-receive-pay" data-locale="receivePayment">रकम प्राप्त गर्नुहोस्</button>
       </div>
 
       <!-- Ledger Entries Timeline -->
       <div>
-        <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 6px;" data-locale="history">लेनदेन इतिहास</h4>
-        <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" id="detail-ledger-timeline">
+        <h4 class="section-header" data-locale="history">लेनदेन इतिहास</h4>
+        <div class="ledger-timeline" id="detail-ledger-timeline">
           <!-- Populated dynamically -->
         </div>
       </div>
@@ -399,7 +450,7 @@
   <dialog id="dialog-ledger-transaction" closedby="any" aria-labelledby="ledgerTxTitle">
     <div class="dialog-header">
       <h3 class="dialog-title" id="ledgerTxTitle">उधारो / भुक्तानी थप्नुहोस्</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-ledger-transaction').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-ledger-transaction').close()"><span class="mi">close</span></button>
     </div>
     <form id="ledger-transaction-form">
       <input type="hidden" id="ledger-tx-type" value="credit">
@@ -419,7 +470,7 @@
   <dialog id="dialog-sms-preview" closedby="any" aria-labelledby="smsPreviewTitle">
     <div class="dialog-header">
       <h3 class="dialog-title" id="smsPreviewTitle" data-locale="smsPreview">पठाइने SMS सन्देश:</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-sms-preview').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-sms-preview').close()"><span class="mi">close</span></button>
     </div>
     <div class="sms-body-preview" id="sms-text-box">...</div>
     <div class="sms-receipt">
@@ -433,11 +484,11 @@
   <dialog id="dialog-online-qr" closedby="any" aria-labelledby="qrTitle">
     <div class="dialog-header">
       <h3 class="dialog-title" id="qrTitle">Fonepay QR Code</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-online-qr').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-online-qr').close()"><span class="mi">close</span></button>
     </div>
     <div class="qr-container">
       <div class="qr-placeholder">
-        <div style="font-size: 32px; margin-bottom: 6px;">🎯</div>
+        <span class="mi" style="font-size: 44px; color: var(--primary-color);">qr_code_2</span>
         <strong>सजिलो खाता QR</strong><br>
         <span style="font-size: 10px; color: var(--text-secondary);">Birgunj MSME merchant ID: 88923</span>
       </div>
@@ -449,14 +500,14 @@
   <dialog id="dialog-invoice-receipt" closedby="any" aria-labelledby="receiptTitle" style="max-width: 360px;">
     <div class="dialog-header">
       <h3 class="dialog-title" id="receiptTitle">Invoice Receipt</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-invoice-receipt').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-invoice-receipt').close()"><span class="mi">close</span></button>
     </div>
     
     <div id="receipt-content" style="font-family: monospace; font-size: 12px; background-color: #fff; padding: 12px; border: 1px solid var(--border-color); color: #000; border-radius: 4px;">
       <!-- Populated dynamically -->
     </div>
     
-    <div style="display: flex; gap: 8px; margin-top: 16px;">
+    <div class="btn-row" style="margin-top: 16px;">
       <button class="btn-primary" id="btn-invoice-whatsapp" style="background-color: #25D366;">
         WhatsApp Share
       </button>
@@ -470,7 +521,7 @@
   <dialog id="dialog-adjust-stock" closedby="any" aria-labelledby="adjustTitle">
     <div class="dialog-header">
       <h3 class="dialog-title" id="adjustTitle" data-locale="editStock">मौज्दात सम्पादन</h3>
-      <button class="btn-icon" onclick="document.getElementById('dialog-adjust-stock').close()">✖</button>
+      <button class="btn-icon" onclick="document.getElementById('dialog-adjust-stock').close()"><span class="mi">close</span></button>
     </div>
     <form id="adjust-stock-form">
       <input type="hidden" id="adjust-product-id">
@@ -485,29 +536,6 @@
     </form>
   </dialog>
 
-
-  <!-- ==================== DEV CONTROL PANEL ==================== -->
-  <div class="dev-control-panel">
-    <div class="dev-panel-title">
-      <span>⚙️ DEMO CONTROLS</span>
-      <span style="font-size: 9px; opacity: 0.6;">v1.0</span>
-    </div>
-    <div class="dev-row">
-      <span>Status:</span>
-      <button class="btn-dev" id="dev-btn-network">Toggle Offline</button>
-    </div>
-    <div class="dev-row">
-      <span>Firebase Sync:</span>
-      <button class="btn-dev" id="dev-btn-sync">Trigger Sync</button>
-    </div>
-    <div class="dev-row">
-      <span>Database:</span>
-      <button class="btn-dev" id="dev-btn-reset" style="background-color: var(--danger-color);">Reset Data</button>
-    </div>
-    <div style="font-size: 8px; color: #94A3B8; text-align: center; border-top: 1px solid #334155; padding-top: 4px; margin-top: 4px;">
-      Offline-First simulator & Sparrow SMS payload debugger
-    </div>
-  </div>
 
   <script type="module" src="./app.js"></script>
 </body>
