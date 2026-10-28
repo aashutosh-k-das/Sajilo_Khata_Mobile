@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../app/themes/app_theme.dart';
 import '../../core/providers.dart';
 import '../../core/services/auth_service.dart';
+import '../../shared/widgets/ui.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -18,7 +21,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   bool _isLoading = false;
   bool _codeSent = false;
-  String _verificationId = '';
   String? _errorMessage;
 
   @override
@@ -26,6 +28,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _phoneController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  void _showError(Object e) {
+    if (!mounted) return;
+    final message = switch (e) {
+      FirebaseAuthException(:final message, :final code) => message ?? code,
+      GoogleSignInException(code: GoogleSignInExceptionCode.canceled) =>
+        'लगइन रद्द गरियो (Login cancelled)',
+      _ => '$e',
+    };
+    setState(() {
+      _isLoading = false;
+      _errorMessage = 'त्रुटि भयो: $message';
+    });
   }
 
   // Phase 1: Send SMS OTP code
@@ -44,8 +60,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _errorMessage = null;
     });
 
-    // Offline mode (Firebase not configured): use the developer OTP, like the web prototype
-    if (!_authService.firebaseReady) {
+    // Test build without Firebase: the developer OTP stands in for the SMS
+    if (_authService.usesDevLogin) {
       setState(() {
         _isLoading = false;
         _codeSent = true;
@@ -53,47 +69,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-              'अफलाइन मोड: OTP ${AuthService.devOtp} प्रयोग गर्नुहोस् (Offline mode: use ${AuthService.devOtp})'),
+              'टेस्ट मोड: OTP ${AuthService.devOtp} (Test build: use ${AuthService.devOtp})'),
         ),
       );
       return;
     }
 
     try {
-      await _authService.verifyPhoneNumber(
+      await _authService.sendOtp(
         phoneNumber: phone,
-        onVerificationCompleted: (credential) async {
-          // Automatic SMS retrieval on Android
-          await _authService.signInWithCredential(credential);
-          _onLoginSuccess();
-        },
-        onVerificationFailed: (e) {
-          if (!mounted) return;
-          setState(() {
-            _isLoading = false;
-            _errorMessage = 'प्रमाणीकरण असफल भयो: ${e.message}';
-          });
-        },
-        onCodeSent: (verificationId, resendToken) {
+        onCodeSent: () {
           if (!mounted) return;
           setState(() {
             _isLoading = false;
             _codeSent = true;
-            _verificationId = verificationId;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('OTP कोड पठाइयो! (OTP Code Sent!)')),
           );
         },
-        onCodeAutoRetrievalTimeout: (verificationId) {
-          _verificationId = verificationId;
-        },
+        onAutoVerified: _onLoginSuccess,
+        onFailed: (message) => _showError(message),
       );
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'त्रुटि भयो: $e';
-      });
+      _showError(e);
     }
   }
 
@@ -113,7 +112,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _errorMessage = null;
     });
 
-    if (!_authService.firebaseReady) {
+    if (_authService.usesDevLogin) {
       if (code == AuthService.devOtp) {
         await _authService.signInLocally(_phoneController.text.trim());
         _onLoginSuccess();
@@ -128,10 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     try {
-      await _authService.signInWithOtp(
-        verificationId: _verificationId,
-        smsCode: code,
-      );
+      await _authService.confirmOtp(code);
       _onLoginSuccess();
     } catch (e) {
       if (!mounted) return;
@@ -143,6 +139,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _socialSignIn(Future<void> Function() signIn) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      await signIn();
+      _onLoginSuccess();
+    } catch (e) {
+      _showError(e);
+    }
+  }
+
   // The app root listens to sessionProvider and swaps to the home shell on its own
   void _onLoginSuccess() {
     if (mounted) setState(() => _isLoading = false);
@@ -150,157 +159,265 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurfaceVariant;
+    final showForm = _authService.firebaseReady || AuthService.devLoginAllowed;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Logo Symbol
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
+      body: Stack(
+        children: [
+          // Brand header behind the form card
+          Container(
+            height: 300,
+            decoration: const BoxDecoration(
+              gradient: AppTheme.brandGradient,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(child: BrandMark(size: 76, onDark: true)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'सजिलो खाता',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Text(
+                        'बिरगन्जका साना व्यवसायीहरूका लागि डिजिटल लेजर',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: Colors.white70),
+                      ),
+                      const SizedBox(height: 28),
+                      if (!showForm)
+                        _notConfiguredNotice()
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 30,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                _codeSent
+                                    ? 'OTP प्रमाणित गर्नुहोस्'
+                                    : 'लगइन गर्नुहोस्',
+                                style: const TextStyle(
+                                    fontSize: 22, fontWeight: FontWeight.w800),
+                              ),
+                              Text(
+                                _codeSent
+                                    ? '+977 ${_phoneController.text.trim()} मा पठाइएको ६-अङ्कको कोड राख्नुहोस्'
+                                    : 'तपाईंको मोबाइल नम्बरमा OTP पठाइनेछ (We will text you a code)',
+                                style: TextStyle(fontSize: 13, color: muted),
+                              ),
+                              const SizedBox(height: 20),
+                              if (!_codeSent)
+                                TextField(
+                                  controller: _phoneController,
+                                  keyboardType: TextInputType.phone,
+                                  maxLength: 10,
+                                  style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600),
+                                  decoration: InputDecoration(
+                                    hintText: '98XXXXXXXX',
+                                    // Country code stays visible even before typing
+                                    prefixIcon: Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 14, right: 10),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text('🇳🇵',
+                                              style: TextStyle(fontSize: 18)),
+                                          const SizedBox(width: 6),
+                                          Text('+977',
+                                              style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: muted)),
+                                        ],
+                                      ),
+                                    ),
+                                    counterText: '',
+                                  ),
+                                )
+                              else
+                                TextField(
+                                  controller: _otpController,
+                                  keyboardType: TextInputType.number,
+                                  maxLength: 6,
+                                  autofocus: true,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    letterSpacing: 14,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: '••••••',
+                                    counterText: '',
+                                  ),
+                                ),
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.errorColor
+                                        .withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                        color: AppTheme.errorColor,
+                                        fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 18),
+                              FilledButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : (_codeSent ? _verifyOtp : _sendOtp),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: Colors.white),
+                                      )
+                                    : Text(_codeSent
+                                        ? 'कोड प्रमाणित गर्नुहोस् (Verify)'
+                                        : 'OTP कोड पाउनुहोस् (Get OTP)'),
+                              ),
+                              if (_codeSent)
+                                TextButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => setState(() {
+                                            _codeSent = false;
+                                            _otpController.clear();
+                                            _errorMessage = null;
+                                          }),
+                                  child: const Text(
+                                      'नम्बर परिवर्तन गर्नुहोस् (Change number)'),
+                                ),
+                              if (_authService.firebaseReady && !_codeSent) ...[
+                                const SizedBox(height: 18),
+                                Row(children: [
+                                  const Expanded(child: Divider()),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
+                                    child: Text('वा (or)',
+                                        style: TextStyle(color: muted)),
+                                  ),
+                                  const Expanded(child: Divider()),
+                                ]),
+                                const SizedBox(height: 18),
+                                _socialButton(
+                                  label:
+                                      'Google बाट लगइन (Continue with Google)',
+                                  icon: Icons.g_mobiledata_rounded,
+                                  color: const Color(0xFFDB4437),
+                                  onPressed: () => _socialSignIn(
+                                      _authService.signInWithGoogle),
+                                ),
+                                if (AuthService.facebookEnabled) ...[
+                                  const SizedBox(height: 12),
+                                  _socialButton(
+                                    label:
+                                        'Facebook बाट लगइन (Continue with Facebook)',
+                                    icon: Icons.facebook_rounded,
+                                    color: const Color(0xFF1877F2),
+                                    onPressed: () => _socialSignIn(
+                                        _authService.signInWithFacebook),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.lock_outline_rounded,
+                              size: 14, color: muted),
+                          const SizedBox(width: 6),
+                          Text('तपाईंको डाटा सुरक्षित छ (Your data is secure)',
+                              style: TextStyle(fontSize: 12, color: muted)),
+                        ],
                       ),
                     ],
                   ),
-                  child: const Text(
-                    'स',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 38,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // App Name & description
-              const Text(
-                'सजिलो खाता',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'बिरगन्जका साना व्यवसायीहरूका लागि डिजिटल लेजर',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Form fields
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (!_codeSent) ...[
-                        const Text(
-                          'मोबाईल नम्बर (Mobile Number)',
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          maxLength: 10,
-                          decoration: const InputDecoration(
-                            hintText: '98XXXXXXXX',
-                            prefixText: '+977 ',
-                            counterText: '',
-                          ),
-                        ),
-                      ] else ...[
-                        const Text(
-                          'OTP कोड राख्नुहोस् (Enter OTP Code)',
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _otpController,
-                          keyboardType: TextInputType.number,
-                          maxLength: 6,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            letterSpacing: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          decoration: const InputDecoration(
-                            hintText: '******',
-                            counterText: '',
-                          ),
-                        ),
-                      ],
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(
-                              color: AppTheme.errorColor, fontSize: 11),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      if (_isLoading)
-                        const Center(
-                          child: CircularProgressIndicator(
-                              color: AppTheme.primaryColor),
-                        )
-                      else
-                        ElevatedButton(
-                          onPressed: _codeSent ? _verifyOtp : _sendOtp,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            _codeSent
-                                ? 'कोड प्रमाणित गर्नुहोस् (Verify)'
-                                : 'OTP कोड पाउनुहोस् (Get OTP)',
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _socialButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: color, size: 28),
+      label: Text(label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  // Production build without Firebase config: there is no server to log in against
+  Widget _notConfiguredNotice() {
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text(
+          'लगइन अझै सेटअप भएको छैन।\n'
+          'Login is not set up yet: this build has no Firebase configuration. '
+          'Run `flutterfire configure` and rebuild the app.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13),
         ),
       ),
     );

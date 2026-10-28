@@ -23,7 +23,9 @@ Sajilo Khata Mobile is a mobile-first, offline-first digital ledger and billing 
 | --- | --- |
 | `sajilo_khata_mobile/` | Flutter app (Android / iOS / web) — the product |
 | `index.html`, `app.js`, `db.js`, `locales.js`, `sparrow_sms.js`, `style.css` | Vite web prototype (localStorage-backed demo) |
-| `firebase.json` | Firebase Hosting config for the web prototype |
+| `functions/` | Cloud Function that emails a sign-in alert |
+| `firestore.rules` | Firestore security rules |
+| `firebase.json` | Firebase config: Hosting (web prototype), Functions, Firestore rules |
 
 ## Getting Started
 
@@ -31,7 +33,7 @@ Sajilo Khata Mobile is a mobile-first, offline-first digital ledger and billing 
 
 - Flutter SDK (includes Dart)
 - Android Studio (Android) or Xcode (iOS) to run on a device or emulator
-- A Firebase project, only if you want phone OTP login and cloud sync
+- A Firebase project for login (phone OTP, Google, Facebook) and cloud sync
 
 ### Run the Flutter app
 
@@ -42,22 +44,69 @@ flutter pub get
 flutter run              # or: flutter run -d chrome
 ```
 
-Without Firebase configuration the app runs in **local offline mode**: login accepts any Nepal mobile
-number with the developer OTP `123456`, and all data stays on the device.
+Every account starts empty; there is no demo data.
+
+### Login
+
+The app signs users in with Firebase Authentication: **phone number + SMS OTP**, **Google**, and
+optionally **Facebook**. Until Firebase is configured, a release build shows "Login is not set up yet".
+
+For testing without Firebase, debug builds (`flutter run`) and builds made with
+`--dart-define=DEV_LOGIN=true` accept the test OTP `123456` and keep data on the device. Never ship a
+`DEV_LOGIN` build to real users.
 
 On web the database runs on sqlite3 wasm. `web/sqlite3.wasm` must match the resolved `sqlite3`
 package version in `pubspec.lock`; if they differ, the app shows a blank page.
 
-### Enabling Firebase (phone OTP login + cloud sync)
+### Setting up Firebase (required for real login and cloud sync)
 
-```bash
-dart pub global activate flutterfire_cli
-flutterfire configure            # writes google-services.json / GoogleService-Info.plist
-```
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com) and add a
+   Firestore database.
+2. Connect the app (writes `google-services.json`, `GoogleService-Info.plist` and `lib/firebase_options.dart`):
+   ```bash
+   dart pub global activate flutterfire_cli
+   flutterfire configure
+   ```
+   Then in `lib/main.dart` import `firebase_options.dart` and change `Firebase.initializeApp()` to
+   `Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)` (web needs these options).
+3. In **Authentication > Sign-in method**, enable:
+   - **Phone**: SMS OTP needs the Blaze (pay-as-you-go) plan. Add test numbers there to try it for free.
+   - **Google**: add your app's SHA-1 and SHA-256 in **Project settings > Your apps > Android**:
+     ```bash
+     keytool -list -v -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android
+     ```
+     Then run `flutterfire configure` again so `google-services.json` includes the OAuth client.
+   - **Facebook** (optional): create an app at [developers.facebook.com](https://developers.facebook.com),
+     paste its App ID and App Secret into Firebase, and copy Firebase's redirect URI into the Facebook
+     app's Facebook Login settings. Put the App ID and Client Token in
+     `android/app/src/main/res/values/strings.xml` and `ios/Runner/Info.plist` (replace
+     `000000000000000`), then build with `--dart-define=FACEBOOK_LOGIN=true`.
 
-Enable **Phone** sign-in in Firebase Authentication and create a Firestore database. Synced data is
-written to `shops/{uid}/{bills,transactions,customers,inventory}`. Tap the Online indicator in the app
-bar to sync.
+Synced data is written to `shops/{uid}/{bills,transactions,customers,inventory}`. Tap the Online
+indicator in the app bar to sync.
+
+### Sign-in alert emails
+
+When someone signs in with Google (or Facebook), the app records the login in Firestore and the
+`notifyLogin` Cloud Function in `functions/` emails the account owner: "your account was signed in
+with Google on android at <time>". Phone-only accounts have no email, so they get no alert.
+
+Setup (Cloud Functions need the Blaze plan):
+
+1. Create a Gmail **App Password** for the sending account: Google Account > Security >
+   2-Step Verification > App passwords.
+2. Deploy:
+   ```bash
+   npm install -g firebase-tools && firebase login
+   firebase use --add                                  # pick your Firebase project
+   firebase functions:secrets:set GMAIL_USER           # e.g. sajilokhata.alerts@gmail.com
+   firebase functions:secrets:set GMAIL_APP_PASSWORD   # the 16-character App Password
+   cd functions && npm install && cd ..
+   firebase deploy --only functions,firestore:rules
+   ```
+
+`firestore.rules` lets each user read and write only their own `shops/{uid}` data, and makes login
+records append-only.
 
 ### Sparrow SMS reminders
 
@@ -76,7 +125,8 @@ flutter test
 ### Build
 
 ```bash
-flutter build apk        # Android
+flutter build apk --release                         # Android, real login (needs Firebase)
+flutter build apk --release --dart-define=DEV_LOGIN=true   # Android test build, OTP 123456
 flutter build web        # Web
 ```
 

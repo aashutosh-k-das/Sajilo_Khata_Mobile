@@ -14,6 +14,8 @@ class AppStrings {
   static const Map<String, Map<String, String>> _strings = {
     'ne': {
       'appName': 'सजिलो खाता',
+      'namaste': 'नमस्ते 🙏',
+      'tagline': 'तपाईंको पसलको डिजिटल खाता',
       'appSubtitle': 'बिरगन्जका साना व्यवसायीहरूका लागि डिजिटल लेजर',
       'dashboard': 'ड्यासबोर्ड',
       'billing': 'बिलिङ',
@@ -61,6 +63,7 @@ class AppStrings {
       'close': 'बन्द गर्नुहोस्',
       'search': 'खोज्नुहोस्',
       'noProducts': 'कुनै सामान फेला परेन।',
+      'addProductsFirst': 'बिल बनाउन पहिले मौज्दात ट्याबमा सामान थप्नुहोस्।',
       'inStock': 'मौज्दात छ',
       'lowStock': 'कम मौज्दात',
       'outOfStock': 'सकियो',
@@ -100,6 +103,8 @@ class AppStrings {
     },
     'en': {
       'appName': 'Sajilo Khata',
+      'namaste': 'Namaste 🙏',
+      'tagline': 'The digital ledger for your shop',
       'appSubtitle': 'Simple digital khata ledger for MSMEs in Birgunj',
       'dashboard': 'Dashboard',
       'billing': 'Billing',
@@ -147,6 +152,8 @@ class AppStrings {
       'close': 'Close',
       'search': 'Search',
       'noProducts': 'No products found.',
+      'addProductsFirst':
+          'Add products in the Inventory tab first to start billing.',
       'inStock': 'In stock',
       'lowStock': 'Low stock',
       'outOfStock': 'Out of stock',

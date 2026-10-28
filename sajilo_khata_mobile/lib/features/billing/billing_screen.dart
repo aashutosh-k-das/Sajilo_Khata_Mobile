@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/utils/vat_calculator.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/form_dialogs.dart';
+import '../../shared/widgets/ui.dart';
 import 'receipt_dialog.dart';
 
 class BillingScreen extends ConsumerStatefulWidget {
@@ -181,6 +182,11 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                   ],
                   onChanged: (v) => _selectProduct(v, products),
                 ),
+                if (products.isEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(t['addProductsFirst'],
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -226,16 +232,17 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
           child: Column(
             children: [
               if (_cart.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(t['cartEmpty'],
-                      style: const TextStyle(color: Colors.grey)),
+                EmptyState(
+                  icon: Icons.shopping_cart_outlined,
+                  message: t['cartEmpty'],
                 )
               else
                 for (var i = 0; i < _cart.length; i++)
                   ListTile(
-                    dense: true,
-                    title: Text(_cart[i].name),
+                    leading: IconBadge(Icons.shopping_bag_rounded,
+                        color: AppTheme.primaryColor),
+                    title: Text(_cart[i].name,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text(
                         '${_cart[i].qty} × ${VatCalculator.formatCurrency(_cart[i].price)}'),
                     trailing: Row(
@@ -253,9 +260,13 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                       ],
                     ),
                   ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.all(12),
+              Container(
+                margin: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: Column(
                   children: [
                     _TotalRow(t['subtotal'], subtotal),
@@ -273,42 +284,39 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
         const SizedBox(height: 16),
 
         // Payment method
-        Text(t['paymentMethod'],
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        SectionHeader(t['paymentMethod']),
         SegmentedButton<String>(
           segments: [
             ButtonSegment(
                 value: 'cash',
                 label: Text(t['cash']),
-                icon: const Icon(Icons.payments_outlined)),
+                icon: const Icon(Icons.payments_rounded)),
             ButtonSegment(
                 value: 'credit',
                 label: Text(t['credit']),
-                icon: const Icon(Icons.book_outlined)),
+                icon: const Icon(Icons.menu_book_rounded)),
             ButtonSegment(
                 value: 'online',
                 label: Text(t['online_pay']),
-                icon: const Icon(Icons.qr_code)),
+                icon: const Icon(Icons.qr_code_2_rounded)),
           ],
           selected: {_paymentMethod},
           onSelectionChanged: (s) => setState(() => _paymentMethod = s.first),
         ),
         const SizedBox(height: 20),
-        FilledButton(
+        FilledButton.icon(
           onPressed: _saving ? null : () => _checkout(customers),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: _saving
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+          icon: _saving
               ? const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))
-              : Text(t['checkout'],
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.bold)),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.check_circle_rounded),
+          label: Text(_cart.isEmpty
+              ? t['checkout']
+              : '${t['checkout']} • ${VatCalculator.formatCurrency(VatCalculator.calculateTotal(subtotal))}'),
         ),
       ],
     );
@@ -356,8 +364,9 @@ class _TotalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = TextStyle(
-        fontSize: bold ? 16 : 13,
-        fontWeight: bold ? FontWeight.bold : FontWeight.normal);
+        fontSize: bold ? 20 : 13.5,
+        fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
+        color: bold ? Theme.of(context).colorScheme.primary : null);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(

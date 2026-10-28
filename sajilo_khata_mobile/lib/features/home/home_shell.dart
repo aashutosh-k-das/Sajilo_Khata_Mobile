@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/themes/app_theme.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/form_dialogs.dart';
+import '../../shared/widgets/ui.dart';
 import '../billing/billing_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../inventory/inventory_screen.dart';
@@ -43,83 +44,87 @@ class HomeShell extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 16,
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'स',
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 8),
+            const BrandMark(size: 36),
+            const SizedBox(width: 10),
             Text(t['appName']),
           ],
         ),
         actions: [
-          // Cloud sync indicator: green when Firebase is configured, grey in local-only mode
-          InkWell(
-            onTap: () => _sync(context, ref),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6),
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: cloud ? AppTheme.successColor : Colors.grey,
-                      shape: BoxShape.circle,
+          // Cloud sync pill: green when Firebase is configured, grey in local-only mode
+          Material(
+            color: (cloud ? AppTheme.successColor : Colors.grey)
+                .withValues(alpha: 0.12),
+            shape: const StadiumBorder(),
+            child: InkWell(
+              onTap: () => _sync(context, ref),
+              customBorder: const StadiumBorder(),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Row(
+                  children: [
+                    Icon(cloud ? Icons.cloud_done_rounded : Icons.cloud_off,
+                        size: 16,
+                        color: cloud ? AppTheme.successColor : Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      cloud ? t['online'] : t['offline'],
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: cloud ? AppTheme.successColor : Colors.grey,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    cloud ? t['online'] : t['offline'],
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cloud ? AppTheme.successColor : Colors.grey,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.language),
+            icon: const Icon(Icons.translate_rounded),
             tooltip: 'नेपाली / English',
             onPressed: () => ref.read(languageProvider.notifier).toggle(),
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             tooltip: t['logout'],
             onPressed: () => ref.read(authServiceProvider).signOut(),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: IndexedStack(index: tab, children: _tabs),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: tab,
-        onTap: (i) => ref.read(homeTabProvider.notifier).state = i,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-              icon: const Icon(Icons.dashboard), label: t['dashboard']),
-          BottomNavigationBarItem(
-              icon: const Icon(Icons.receipt), label: t['billing']),
-          BottomNavigationBarItem(
-              icon: const Icon(Icons.inventory), label: t['inventory']),
-          BottomNavigationBarItem(
-              icon: const Icon(Icons.account_balance_wallet),
-              label: t['khata']),
-        ],
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+              top: BorderSide(color: Theme.of(context).colorScheme.outline)),
+        ),
+        child: NavigationBar(
+          selectedIndex: tab,
+          onDestinationSelected: (i) =>
+              ref.read(homeTabProvider.notifier).state = i,
+          destinations: [
+            NavigationDestination(
+                icon: const Icon(Icons.space_dashboard_outlined),
+                selectedIcon: const Icon(Icons.space_dashboard_rounded),
+                label: t['dashboard']),
+            NavigationDestination(
+                icon: const Icon(Icons.receipt_long_outlined),
+                selectedIcon: const Icon(Icons.receipt_long_rounded),
+                label: t['billing']),
+            NavigationDestination(
+                icon: const Icon(Icons.inventory_2_outlined),
+                selectedIcon: const Icon(Icons.inventory_2_rounded),
+                label: t['inventory']),
+            NavigationDestination(
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                selectedIcon: const Icon(Icons.account_balance_wallet_rounded),
+                label: t['khata']),
+          ],
+        ),
       ),
     );
   }

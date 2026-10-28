@@ -9,6 +9,7 @@ import '../../core/services/sms_service.dart';
 import '../../core/utils/vat_calculator.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/form_dialogs.dart';
+import '../../shared/widgets/ui.dart';
 import 'khata_screen.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
@@ -36,27 +37,70 @@ class CustomerDetailScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Text(t['balance'],
-                      style: const TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 4),
-                  Text(
-                    VatCalculator.formatCurrency(customer.balance.abs()),
-                    style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: color),
+          // Balance summary
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              gradient: AppTheme.brandGradient,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
                   ),
-                  Text(label, style: TextStyle(color: color, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text('📞 ${customer.phone}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                ],
-              ),
+                  child: Text(
+                    customer.name.isEmpty
+                        ? '?'
+                        : customer.name.characters.first.toUpperCase(),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(t['balance'],
+                    style: const TextStyle(color: Colors.white70)),
+                Text(
+                  VatCalculator.formatCurrency(customer.balance.abs()),
+                  style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(label,
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800)),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.call_rounded,
+                        size: 14, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    Text(customer.phone,
+                        style: const TextStyle(
+                            fontSize: 13, color: Colors.white70)),
+                  ],
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -66,7 +110,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.errorColor),
-                  icon: const Icon(Icons.arrow_upward),
+                  icon: const Icon(Icons.north_east_rounded),
                   label: Text(t['giveCredit']),
                   onPressed: () =>
                       _showEntryDialog(context, ref, customer, 'credit'),
@@ -77,7 +121,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.successColor),
-                  icon: const Icon(Icons.arrow_downward),
+                  icon: const Icon(Icons.south_west_rounded),
                   label: Text(t['receivePayment']),
                   onPressed: () =>
                       _showEntryDialog(context, ref, customer, 'payment'),
@@ -88,44 +132,53 @@ class CustomerDetailScreen extends ConsumerWidget {
           if (customer.balance > 0) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              icon: const Icon(Icons.sms_outlined),
+              icon: const Icon(Icons.sms_rounded),
               label: Text(t['sendReminder']),
               onPressed: () => _sendReminder(context, ref, customer),
             ),
           ],
           const SizedBox(height: 20),
+          SectionHeader(t['khata']),
           Card(
+            margin: EdgeInsets.zero,
             child: ledger.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Center(
-                        child: Text(t['noLedger'],
-                            style: const TextStyle(color: Colors.grey))),
+                ? EmptyState(
+                    icon: Icons.receipt_long_rounded,
+                    message: t['noLedger'],
                   )
                 : Column(
                     children: [
-                      for (final tx in ledger)
+                      for (final (i, tx) in ledger.indexed) ...[
+                        if (i > 0) const Divider(indent: 68),
                         ListTile(
-                          dense: true,
-                          leading: Icon(
+                          leading: IconBadge(
                             tx.type == 'credit'
-                                ? Icons.arrow_upward
-                                : Icons.arrow_downward,
+                                ? Icons.north_east_rounded
+                                : Icons.south_west_rounded,
                             color: tx.type == 'credit'
                                 ? AppTheme.errorColor
                                 : AppTheme.successColor,
                           ),
-                          title: Text(tx.type == 'credit'
-                              ? t['credit']
-                              : t['receivePayment']),
+                          title: Text(
+                              tx.type == 'credit'
+                                  ? t['credit']
+                                  : t['receivePayment'],
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
                           subtitle: Text(
                               '${DateFormat.yMMMd().add_jm().format(tx.date)}\n${tx.description}'),
                           isThreeLine: true,
                           trailing: Text(
-                            VatCalculator.formatCurrency(tx.amount),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            '${tx.type == 'credit' ? '+' : '−'} ${VatCalculator.formatCurrency(tx.amount)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: tx.type == 'credit'
+                                  ? AppTheme.errorColor
+                                  : AppTheme.successColor,
+                            ),
                           ),
                         ),
+                      ],
                     ],
                   ),
           ),

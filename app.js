@@ -510,42 +510,27 @@ function setupEventListeners() {
     }
   });
 
-  // --- DEV CONTROLS EVENT HANDLERS ---
-  const netBtn = document.getElementById('dev-btn-network');
-  const syncBtn = document.getElementById('dev-btn-sync');
-  const resetBtn = document.getElementById('dev-btn-reset');
-
-  netBtn.addEventListener('click', () => {
-    isOnline = !isOnline;
+  // Follow the device's real connection state
+  const applyNetworkState = (online) => {
+    isOnline = online;
     const syncDot = document.querySelector('.indicator-dot');
     const syncText = document.getElementById('sync-text');
-    
+
     if (isOnline) {
       syncDot.classList.remove('offline');
       syncText.textContent = currentLanguage === 'ne' ? 'अनलाइन' : 'Online';
-      netBtn.textContent = 'Toggle Offline';
-      netBtn.style.backgroundColor = '#334155';
       showToast('Connection restored. Firestore ready.');
       // Auto Sync if queue exists
       triggerBackgroundSync();
     } else {
       syncDot.classList.add('offline');
       syncText.textContent = currentLanguage === 'ne' ? 'अफलाइन' : 'Offline';
-      netBtn.textContent = 'Toggle Online';
-      netBtn.style.backgroundColor = 'var(--danger-color)';
       showToast('Offline mode. Data saves locally.', true);
     }
-  });
-
-  syncBtn.addEventListener('click', triggerBackgroundSync);
-
-  resetBtn.addEventListener('click', () => {
-    if (confirm('Are you sure you want to reset all data?')) {
-      db.resetData();
-      showToast('Database reset to defaults');
-      navigateToPage('page-dashboard');
-    }
-  });
+  };
+  window.addEventListener('online', () => applyNetworkState(true));
+  window.addEventListener('offline', () => applyNetworkState(false));
+  if (!navigator.onLine) applyNetworkState(false);
 
   // Low stock card trigger to jump to inventory view
   document.getElementById('card-low-stock-trigger').addEventListener('click', () => {
@@ -597,6 +582,8 @@ function renderDashboard() {
   const txs = db.getTransactions().slice(0, 5); // get top 5 recent ones
 
   // Set values
+  const heroDate = document.getElementById('hero-date');
+  if (heroDate) heroDate.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   document.getElementById('metric-sales').textContent = `रु. ${metrics.todaySales.toLocaleString()}`;
   document.getElementById('metric-credit').textContent = `रु. ${metrics.totalCredit.toLocaleString()}`;
   document.getElementById('metric-low-stock').textContent = metrics.lowStockCount;
@@ -606,10 +593,10 @@ function renderDashboard() {
   const lowCard = document.getElementById('card-low-stock-trigger');
   const lowAlertIcon = document.getElementById('low-stock-alert-icon');
   if (metrics.lowStockCount > 0) {
-    lowCard.style.border = '2px solid var(--danger-color)';
+    lowCard.style.borderColor = 'rgba(245, 158, 11, 0.6)';
     lowAlertIcon.style.animation = 'pulse 1s infinite alternate';
   } else {
-    lowCard.style.border = '1px solid var(--border-color)';
+    lowCard.style.borderColor = '';
     lowAlertIcon.style.animation = 'none';
   }
 
@@ -618,7 +605,7 @@ function renderDashboard() {
   recentList.innerHTML = '';
 
   if (txs.length === 0) {
-    recentList.innerHTML = `<div style="text-align: center; font-size: 12px; color: var(--text-secondary); padding: 12px;">No transactions yet.</div>`;
+    recentList.innerHTML = emptyStateHtml('receipt_long', 'No transactions yet.');
     return;
   }
 
@@ -640,16 +627,40 @@ function renderDashboard() {
     });
 
     row.innerHTML = `
+      ${avatarHtml(custName)}
       <div class="item-left">
         <span class="item-title">${custName}</span>
         <span class="item-subtitle">${dateFormatted} • ${tx.description}</span>
       </div>
-      <div class="item-right ${isCredit ? 'credit-owe' : 'credit-clear'}">
-        ${isCredit ? '+' : '-'} रु. ${tx.amount.toLocaleString()}
+      <div class="amount-pill ${isCredit ? 'credit-owe' : 'credit-clear'}">
+        ${isCredit ? '+' : '−'} रु. ${tx.amount.toLocaleString()}
       </div>
     `;
     recentList.appendChild(row);
   });
+}
+
+// --- Small render helpers shared by the lists ---
+const AVATAR_TONES = ['green', 'blue', 'violet', 'amber', 'pink', 'sky'];
+
+function avatarHtml(name) {
+  const hash = [...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 0);
+  const tone = AVATAR_TONES[Math.abs(hash) % AVATAR_TONES.length];
+  const initial = name ? [...name][0].toUpperCase() : '?';
+  return `<span class="avatar tone-${tone}">${initial}</span>`;
+}
+
+function emptyStateHtml(icon, message) {
+  return `<div class="empty-state"><span class="empty-icon"><span class="mi">${icon}</span></span><p>${message}</p></div>`;
+}
+
+function categoryIcon(category) {
+  const c = category.toLowerCase();
+  if (c.includes('dairy')) return 'water_drop';
+  if (c.includes('tea') || c.includes('sugar')) return 'coffee';
+  if (c.includes('snack')) return 'cookie';
+  if (c.includes('grocer')) return 'rice_bowl';
+  return 'shopping_basket';
 }
 
 // 2. Billing View
@@ -685,7 +696,7 @@ function renderCart() {
   cartBody.innerHTML = '';
 
   if (activeCart.length === 0) {
-    cartBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No items added.</td></tr>`;
+    cartBody.innerHTML = `<tr><td colspan="4" class="cart-empty"><span class="mi">shopping_cart</span> No items added.</td></tr>`;
     updateCartTotals(0, 0, 0);
     return;
   }
@@ -696,7 +707,7 @@ function renderCart() {
       <td>${item.name}</td>
       <td>${item.qty}</td>
       <td>रु. ${item.price}</td>
-      <td><button type="button" class="btn-icon" style="width: 24px; height: 24px; padding:0; background: none;" onclick="window.removeItemFromCart(${index})">❌</button></td>
+      <td><button type="button" class="btn-icon btn-remove" title="Remove" onclick="window.removeItemFromCart(${index})"><span class="mi">close</span></button></td>
     `;
     cartBody.appendChild(tr);
   });
@@ -732,7 +743,7 @@ function renderInventoryScreen(searchQuery = '') {
   });
 
   if (products.length === 0) {
-    list.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 24px;">No products found.</div>`;
+    list.innerHTML = emptyStateHtml('inventory_2', 'No products found.');
     return;
   }
 
@@ -741,31 +752,35 @@ function renderInventoryScreen(searchQuery = '') {
     const isOutOfStock = p.stockQty === 0;
     
     let statusClass = 'badge-success';
+    let tone = 'green';
     let statusText = locales[currentLanguage].inStock;
 
     if (isOutOfStock) {
       statusClass = 'badge-danger';
+      tone = 'red';
       statusText = locales[currentLanguage].outOfStock;
     } else if (isLowStock) {
       statusClass = 'badge-warning';
+      tone = 'amber';
       statusText = locales[currentLanguage].lowStock;
     }
 
     const row = document.createElement('div');
     row.className = 'list-item';
-    row.style.borderLeft = isLowStock ? '4px solid var(--danger-color)' : '1px solid var(--border-color)';
+    if (isLowStock) row.classList.add(isOutOfStock ? 'is-danger' : 'is-warning');
     
     row.addEventListener('click', () => {
       openStockAdjustment(p.id);
     });
 
     row.innerHTML = `
+      <span class="icon-badge tone-${tone}"><span class="mi">${categoryIcon(p.category)}</span></span>
       <div class="item-left">
         <span class="item-title">${p.name}</span>
-        <span class="item-subtitle">${p.category} • Selling: रु. ${p.sellingPrice} • Min Alert limit: ${p.minThreshold}</span>
+        <span class="item-subtitle">${p.category} • रु. ${p.sellingPrice}</span>
       </div>
-      <div class="item-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-        <span>Qty: ${p.stockQty}</span>
+      <div class="item-right stock-col">
+        <span class="stock-qty">${p.stockQty}</span>
         <span class="badge-status ${statusClass}">${statusText}</span>
       </div>
     `;
@@ -794,7 +809,7 @@ function renderKhataScreen(searchQuery = '') {
   });
 
   if (customers.length === 0) {
-    list.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 24px;">No customers found.</div>`;
+    list.innerHTML = emptyStateHtml('menu_book', 'No customers found.');
     return;
   }
 
@@ -811,11 +826,12 @@ function renderKhataScreen(searchQuery = '') {
     });
 
     row.innerHTML = `
+      ${avatarHtml(c.name)}
       <div class="item-left">
         <span class="item-title">${c.name}</span>
-        <span class="item-subtitle">📞 ${c.phone}</span>
+        <span class="item-subtitle"><span class="mi mi-sm">call</span> ${c.phone}</span>
       </div>
-      <div class="item-right ${oweClass}">
+      <div class="amount-pill ${oweClass}">
         ${balanceText}
       </div>
     `;
@@ -835,13 +851,8 @@ function showCustomerDetails(customerId) {
   
   // Balance styling
   const balValEl = document.getElementById('detail-customer-balance');
-  if (customer.balance > 0) {
-    balValEl.style.color = 'var(--danger-color)';
-    document.getElementById('btn-send-sms-reminder').style.display = 'block';
-  } else {
-    balValEl.style.color = 'var(--primary-color)';
-    document.getElementById('btn-send-sms-reminder').style.display = 'none';
-  }
+  balValEl.classList.toggle('is-owed', customer.balance > 0);
+  document.getElementById('btn-send-sms-reminder').style.display = customer.balance > 0 ? 'inline-flex' : 'none';
 
   // Populate Ledger Transactions List
   const timeline = document.getElementById('detail-ledger-timeline');
@@ -849,27 +860,20 @@ function showCustomerDetails(customerId) {
 
   const txs = db.getTransactions(customerId);
   if (txs.length === 0) {
-    timeline.innerHTML = `<div style="padding:16px; font-size: 11px; text-align:center; color: var(--text-secondary);">No ledger records yet.</div>`;
+    timeline.innerHTML = emptyStateHtml('receipt_long', 'No ledger records yet.');
   } else {
     txs.forEach(tx => {
       const isCredit = tx.type === 'credit';
       const dateStr = new Date(tx.date).toLocaleDateString();
       const div = document.createElement('div');
-      div.style.padding = '8px 12px';
-      div.style.borderBottom = '1px solid var(--border-color)';
-      div.style.display = 'flex';
-      div.style.justifyContent = 'space-between';
-      div.style.fontSize = '12px';
-      
+      div.className = 'ledger-row';
       div.innerHTML = `
-        <div>
-          <span style="font-weight: 600; color: ${isCredit ? 'var(--danger-color)' : 'var(--success-color)'};">
-            ${isCredit ? 'उधारो (Credit)' : 'भुक्तानी (Payment)'}
-          </span>
-          <span style="font-size: 10px; color: var(--text-secondary); margin-left: 6px;">${dateStr}</span>
-          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${tx.description}</div>
+        <span class="icon-badge tone-${isCredit ? 'red' : 'green'}"><span class="mi">${isCredit ? 'north_east' : 'south_west'}</span></span>
+        <div class="item-left">
+          <span class="item-title">${isCredit ? 'उधारो (Credit)' : 'भुक्तानी (Payment)'}</span>
+          <span class="item-subtitle">${dateStr} • ${tx.description}</span>
         </div>
-        <strong style="align-self: center;">रु. ${tx.amount.toLocaleString()}</strong>
+        <strong class="${isCredit ? 'credit-owe' : 'credit-clear'}">${isCredit ? '+' : '−'} रु. ${tx.amount.toLocaleString()}</strong>
       `;
       timeline.appendChild(div);
     });

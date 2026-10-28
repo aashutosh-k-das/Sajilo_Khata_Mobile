@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/utils/vat_calculator.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/form_dialogs.dart';
+import '../../shared/widgets/ui.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -44,17 +45,19 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search), hintText: t['search']),
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  hintText: t['search']),
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
           Expanded(
             child: products.isEmpty
-                ? Center(
-                    child: Text(t['noProducts'],
-                        style: const TextStyle(color: Colors.grey)))
+                ? EmptyState(
+                    icon: Icons.inventory_2_rounded,
+                    message: t['noProducts'],
+                  )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                     itemCount: products.length,
                     itemBuilder: (_, i) => _ProductTile(product: products[i]),
                   ),
@@ -81,35 +84,42 @@ class _ProductTile extends ConsumerWidget {
             : (t['inStock'], AppTheme.successColor);
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: p.isLowStock
-            ? BorderSide(color: color, width: 1.5)
-            : BorderSide.none,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        side: BorderSide(
+          color: p.isLowStock
+              ? color.withValues(alpha: 0.5)
+              : Theme.of(context).colorScheme.outline,
+          width: p.isLowStock ? 1.5 : 1,
+        ),
       ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        leading: IconBadge(_categoryIcon(p.category), color: color, size: 46),
         title:
-            Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Text(
-          '${p.category} • ${VatCalculator.formatCurrency(p.sellingPrice)} • min ${p.minThreshold}',
-          style: const TextStyle(fontSize: 12),
+          '${p.category} • ${VatCalculator.formatCurrency(p.sellingPrice)}',
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('${t['qty']}: ${p.stockQty}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
+            Text('${p.stockQty}',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(label,
                   style: TextStyle(
-                      fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+                      fontSize: 10.5,
+                      color: color,
+                      fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -117,6 +127,18 @@ class _ProductTile extends ConsumerWidget {
         onLongPress: () => showProductDialog(context, ref, existing: p),
       ),
     );
+  }
+
+  static IconData _categoryIcon(String category) {
+    final c = category.toLowerCase();
+    if (c.contains('dairy')) return Icons.water_drop_rounded;
+    if (c.contains('tea') || c.contains('sugar')) return Icons.coffee_rounded;
+    if (c.contains('snack')) return Icons.cookie_rounded;
+    if (c.contains('grocer')) return Icons.rice_bowl_rounded;
+    if (c.contains('drink') || c.contains('beverage')) {
+      return Icons.local_drink_rounded;
+    }
+    return Icons.shopping_basket_rounded;
   }
 
   Future<void> _showStockAdjust(BuildContext context, WidgetRef ref) async {

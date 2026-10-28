@@ -4,17 +4,28 @@ import 'package:sajilo_khata_mobile/core/database/khata_repository.dart';
 import 'package:sajilo_khata_mobile/shared/models/models.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'demo_shop.dart';
+
 void main() {
   late KhataRepository repo;
 
   setUpAll(sqfliteFfiInit);
 
+  test('a new install starts with no products, customers or entries', () async {
+    await DatabaseHelper.openForTesting(databaseFactoryFfi);
+    final empty = KhataRepository(DatabaseHelper.instance);
+    expect(await empty.getProducts(), isEmpty);
+    expect(await empty.getCustomers(), isEmpty);
+    expect(await empty.getTransactions(), isEmpty);
+  });
+
   setUp(() async {
     await DatabaseHelper.openForTesting(databaseFactoryFfi);
+    await seedDemoShop(await DatabaseHelper.instance.database);
     repo = KhataRepository(DatabaseHelper.instance);
   });
 
-  test('seeds demo shop data', () async {
+  test('demo shop fixture loads', () async {
     expect(await repo.getProducts(), hasLength(6));
     expect(await repo.getCustomers(), hasLength(4));
     expect(await repo.getTransactions(), hasLength(4));
