@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/themes/app_theme.dart';
+import '../../core/providers.dart';
 import '../../core/services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _authService = AuthService();
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  AuthService get _authService => ref.read(authServiceProvider);
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _codeSent = false;
   String _verificationId = '';
@@ -31,7 +33,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty || phone.length < 10) {
       setState(() {
-        _errorMessage = 'कृपया १०-अङ्कको वैध फोन नम्बर राख्नुहोस्।\n(Please enter a valid 10-digit number)';
+        _errorMessage =
+            'कृपया १०-अङ्कको वैध फोन नम्बर राख्नुहोस्।\n(Please enter a valid 10-digit number)';
       });
       return;
     }
@@ -40,6 +43,21 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
       _errorMessage = null;
     });
+
+    // Offline mode (Firebase not configured): use the developer OTP, like the web prototype
+    if (!_authService.firebaseReady) {
+      setState(() {
+        _isLoading = false;
+        _codeSent = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'अफलाइन मोड: OTP ${AuthService.devOtp} प्रयोग गर्नुहोस् (Offline mode: use ${AuthService.devOtp})'),
+        ),
+      );
+      return;
+    }
 
     try {
       await _authService.verifyPhoneNumber(
@@ -50,12 +68,14 @@ class _LoginScreenState extends State<LoginScreen> {
           _onLoginSuccess();
         },
         onVerificationFailed: (e) {
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
             _errorMessage = 'प्रमाणीकरण असफल भयो: ${e.message}';
           });
         },
-        codeSent: (verificationId, resendToken) {
+        onCodeSent: (verificationId, resendToken) {
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
             _codeSent = true;
@@ -65,10 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
             const SnackBar(content: Text('OTP कोड पठाइयो! (OTP Code Sent!)')),
           );
         },
-        codeAutoRetrievalTimeout: (verificationId) {
-          setState(() {
-            _verificationId = verificationId;
-          });
+        onCodeAutoRetrievalTimeout: (verificationId) {
+          _verificationId = verificationId;
         },
       );
     } catch (e) {
@@ -84,7 +102,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final code = _otpController.text.trim();
     if (code.length != 6) {
       setState(() {
-        _errorMessage = 'कृपया ६-अङ्कको OTP कोड राख्नुहोस्।\n(Please enter the 6-digit OTP code)';
+        _errorMessage =
+            'कृपया ६-अङ्कको OTP कोड राख्नुहोस्।\n(Please enter the 6-digit OTP code)';
       });
       return;
     }
@@ -94,6 +113,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
+    if (!_authService.firebaseReady) {
+      if (code == AuthService.devOtp) {
+        await _authService.signInLocally(_phoneController.text.trim());
+        _onLoginSuccess();
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'गलत OTP कोड। कृपया फेरि प्रयास गर्नुहोस्।\n(Invalid code. Please try again.)';
+        });
+      }
+      return;
+    }
+
     try {
       await _authService.signInWithOtp(
         verificationId: _verificationId,
@@ -101,25 +134,24 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       _onLoginSuccess();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'गलत OTP कोड। कृपया फेरि प्रयास गर्नुहोस्।\n(Invalid code. Please try again.)';
+        _errorMessage =
+            'गलत OTP कोड। कृपया फेरि प्रयास गर्नुहोस्।\n(Invalid code. Please try again.)';
       });
     }
   }
 
+  // The app root listens to sessionProvider and swaps to the home shell on its own
   void _onLoginSuccess() {
-    setState(() {
-      _isLoading = false;
-    });
-    // Navigate to dashboard screen and clear stack
-    Navigator.of(context).pushReplacementNamed('/dashboard');
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -138,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -155,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // App Name & description
               const Text(
                 'सजिलो खाता',
@@ -192,7 +224,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (!_codeSent) ...[
                         const Text(
                           'मोबाईल नम्बर (Mobile Number)',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         TextField(
@@ -208,7 +241,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ] else ...[
                         const Text(
                           'OTP कोड राख्नुहोस् (Enter OTP Code)',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         TextField(
@@ -227,19 +261,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
-                      
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 12),
                         Text(
                           _errorMessage!,
-                          style: const TextStyle(color: AppTheme.errorColor, fontSize: 11),
+                          style: const TextStyle(
+                              color: AppTheme.errorColor, fontSize: 11),
                         ),
                       ],
                       const SizedBox(height: 20),
-                      
                       if (_isLoading)
                         const Center(
-                          child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primaryColor),
                         )
                       else
                         ElevatedButton(
@@ -248,13 +282,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             backgroundColor: AppTheme.primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
+                            minimumSize: const Size.fromHeight(48),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: Text(
-                            _codeSent ? 'कोड प्रमाणित गर्नुहोस् (Verify)' : 'OTP कोड पाउनुहोस् (Get OTP)',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            _codeSent
+                                ? 'कोड प्रमाणित गर्नुहोस् (Verify)'
+                                : 'OTP कोड पाउनुहोस् (Get OTP)',
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                         ),
                     ],

@@ -19,7 +19,6 @@ class AppTheme {
         secondary: secondaryColor,
         error: errorColor,
         surface: Colors.white,
-        background: Color(0xFFF5F7F8),
       ),
       scaffoldBackgroundColor: const Color(0xFFF5F7F8),
       fontFamily: GoogleFonts.notoSansDevanagari().fontFamily,
@@ -36,7 +35,7 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 1,
         shape: RoundedRectangleBorder(
@@ -72,7 +71,6 @@ class AppTheme {
         secondary: secondaryColor,
         error: errorColor,
         surface: Color(0xFF1E293B),
-        background: Color(0xFF0F172A),
       ),
       scaffoldBackgroundColor: const Color(0xFF0F172A),
       fontFamily: GoogleFonts.notoSansDevanagari().fontFamily,
@@ -89,7 +87,7 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: const Color(0xFF1E293B),
         elevation: 1,
         shape: RoundedRectangleBorder(

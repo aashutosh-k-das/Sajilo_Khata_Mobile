@@ -1,19 +1,49 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  AuthService({required this.firebaseReady});
 
-  // Stream to track authentication state changes
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  /// False when Firebase is not configured; the app then runs fully offline
+  /// with a locally stored session and the developer OTP [devOtp].
+  final bool firebaseReady;
 
-  // Get currently logged-in user
-  User? get currentUser => _auth.currentUser;
+  static const String devOtp = '123456';
+  static const String _sessionKey = 'sajilokhata_session';
+
+  final _localSession = StreamController<String?>.broadcast();
+
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+
+  /// Emits the signed-in user's identifier (phone/email/uid), or null when signed out.
+  Stream<String?> sessionChanges() async* {
+    if (firebaseReady) {
+      yield* _auth
+          .authStateChanges()
+          .map((u) => u == null ? null : (u.phoneNumber ?? u.email ?? u.uid));
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    yield prefs.getString(_sessionKey);
+    yield* _localSession.stream;
+  }
+
+  // Get currently logged-in Firebase user (null in offline mode)
+  User? get currentUser => firebaseReady ? _auth.currentUser : null;
+
+  /// Offline-mode sign in after the developer OTP has been checked.
+  Future<void> signInLocally(String identifier) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionKey, identifier);
+    _localSession.add(identifier);
+  }
 
   /// Initiates Phone Number OTP Verification.
-  /// 
+  ///
   /// Calls Firebase Auth's phone number verification flow.
-  /// Handles callbacks for automatic verification, verification failures, 
+  /// Handles callbacks for automatic verification, verification failures,
   /// SMS dispatch, and auto-retrieval timeouts.
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
@@ -40,7 +70,8 @@ class AuthService {
         phoneNumber: formattedPhone,
         timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
-          debugPrint('Phone verification completed automatically: ${credential.smsCode}');
+          debugPrint(
+              'Phone verification completed automatically: ${credential.smsCode}');
           // Sign in automatically if system auto-verifies SMS (e.g. Android auto-read)
           await onVerificationCompleted(credential);
         },
@@ -81,7 +112,8 @@ class AuthService {
   }
 
   /// Complete sign in directly if verification completed automatically
-  Future<UserCredential> signInWithCredential(PhoneAuthCredential credential) async {
+  Future<UserCredential> signInWithCredential(
+      PhoneAuthCredential credential) async {
     try {
       return await _auth.signInWithCredential(credential);
     } catch (e) {
@@ -92,6 +124,12 @@ class AuthService {
 
   /// Sign out current active session
   Future<void> signOut() async {
-    await _auth.signOut();
+    if (firebaseReady) {
+      await _auth.signOut();
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_sessionKey);
+    _localSession.add(null);
   }
 }

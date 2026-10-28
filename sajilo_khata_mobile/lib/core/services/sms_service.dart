@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class SMSService {
   static const String _sparrowApiUrl = 'https://api.sparrowsms.com/v2/sms/';
-  
+
   // Replace with the merchant's actual token provided by Sparrow SMS
   final String _token;
   final String _senderId; // e.g. 'InfoSMS' or client's custom SMS ID
@@ -56,7 +56,7 @@ class SMSService {
   }
 
   /// Helper to generate standard payment reminder message in Nepali (Devanagari)
-  String generateNepaliReminderText({
+  static String generateNepaliReminderText({
     required String customerName,
     required double outstandingAmount,
     required String shopName,

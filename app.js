@@ -91,6 +91,16 @@ function checkAuthSession() {
     authSection.classList.remove('active');
     appHeader.style.display = 'flex';
     appNav.style.display = 'flex';
+    
+    // Set user greeting
+    const greetingEl = document.getElementById('user-greeting');
+    if (greetingEl) {
+      // Session stores either a phone number or a Gmail address under `phone`
+      const id = session.phone || '';
+      const displayName = id.includes('@') ? id.split('@')[0] : id;
+      greetingEl.textContent = `Hello, ${displayName}`;
+    }
+
     navigateToPage('page-dashboard');
   } else {
     authSection.classList.add('active');
@@ -225,6 +235,35 @@ function setupEventListeners() {
     } else {
       showToast(currentLanguage === 'ne' ? 'गलत OTP कोड' : 'Invalid OTP code', true);
     }
+  });
+
+  // Auth Gmail flow
+  document.getElementById('auth-gmail-btn').addEventListener('click', () => {
+    document.getElementById('dialog-google-auth').showModal();
+  });
+
+  // Handle mock Google account selection
+  document.querySelectorAll('#mock-google-accounts .list-item').forEach(item => {
+    item.addEventListener('click', () => {
+      let email = item.getAttribute('data-email');
+      
+      if (!email && item.id === 'btn-mock-another-account') {
+        const input = window.prompt("Enter your email address:", "user@gmail.com");
+        if (!input || !input.includes('@')) return;
+        email = input;
+      }
+      
+      if (email) {
+        document.getElementById('dialog-google-auth').close();
+        showToast(currentLanguage === 'ne' ? 'Google बाट लगइन गर्दै...' : 'Authenticating with Google...');
+        
+        setTimeout(() => {
+          db.setSession(email);
+          checkAuthSession();
+          showToast(currentLanguage === 'ne' ? 'लगइन सफल भयो' : 'Logged in successfully');
+        }, 800);
+      }
+    });
   });
 
   // Quick Action triggers
