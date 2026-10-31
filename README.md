@@ -27,6 +27,148 @@ Sajilo Khata Mobile is a mobile-first, offline-first digital ledger and billing 
 | `firestore.rules` | Firestore security rules |
 | `firebase.json` | Firebase config: Hosting (web prototype), Functions, Firestore rules |
 
+## System Design
+
+### Architecture
+
+The app is **offline-first**: every screen reads and writes a local SQLite database, so billing and
+khata entries work with no internet. Firebase is only used for login, optional cloud backup and
+sign-in alert emails.
+
+```mermaid
+flowchart TB
+    subgraph Device["📱 Flutter app (Android / iOS / Web)"]
+        UI["Screens<br/>Login · Dashboard · Billing · Inventory · Khata"]
+        RP["Riverpod providers<br/>(state, language, theme, data refresh)"]
+        REPO["KhataRepository<br/>(business logic, VAT, stock, balances)"]
+        DB[("SQLite<br/>sqflite · sqlite3 wasm on web")]
+        AUTH["AuthService"]
+        SYNC["SyncService"]
+        SMS["SMSService"]
+        WA["WhatsAppService"]
+        UI <--> RP
+        RP --> REPO --> DB
+        RP --> AUTH
+        RP --> SYNC --> REPO
+    end
+
+    subgraph Firebase["☁️ Firebase"]
+        FA["Firebase Auth<br/>Phone OTP · Google · Facebook"]
+        FS[("Cloud Firestore<br/>shops/{uid}/...")]
+        CF["Cloud Function<br/>notifyLogin"]
+    end
+
+    AUTH -- sign in --> FA
+    AUTH -- "login record" --> FS
+    SYNC -- "batched upserts" --> FS
+    FS -- "onDocumentCreated<br/>logins/{id}" --> CF
+    CF -- "sign-in alert email" --> GM["Gmail SMTP"]
+    SMS -- "payment reminder" --> SP["Sparrow SMS API"]
+    WA -- "receipt deep link" --> WAPP["WhatsApp"]
+```
+
+### Layers
+
+| Layer | Code | Responsibility |
+| --- | --- | --- |
+| Presentation | `lib/features/*`, `lib/shared/widgets` | Screens, dialogs, bottom navigation (`home_shell.dart`) |
+| State | `lib/core/providers.dart` | Riverpod providers; `dataVersionProvider` is bumped after every write so lists and metrics re-fetch |
+| Domain / data | `lib/core/database/khata_repository.dart` | Bills, stock deduction, ledger balances, dashboard metrics — each multi-table write runs in one SQLite transaction |
+| Storage | `lib/core/database/database_helper.dart` | SQLite schema (4 tables) |
+| Services | `lib/core/services/*` | Auth, Firestore sync, Sparrow SMS, WhatsApp sharing |
+| Backend | `functions/`, `firestore.rules` | Sign-in alert email, per-user data isolation |
+
+### Data model (local SQLite)
+
+```mermaid
+erDiagram
+    CUSTOMERS ||--o{ KHATA_TRANSACTIONS : "has ledger entries"
+    CUSTOMERS |o--o{ BILLS : "billed to (optional, walk-in allowed)"
+    INVENTORY ||--o{ BILLS : "items deducted (itemsJson)"
+
+    INVENTORY {
+        int id PK
+        text name
+        text category
+        int stockQty
+        real buyingPrice
+        real sellingPrice
+        int minThreshold
+    }
+    CUSTOMERS {
+        int id PK
+        text name
+        text phone
+        real balance "positive = receivable"
+    }
+    BILLS {
+        int id PK
+        text customerId FK
+        text customerName
+        text itemsJson
+        real subtotal
+        real vat "13%"
+        real total
+        text date
+        text paymentMethod "cash | credit | online"
+        int syncStatus "0 = pending, 1 = synced"
+    }
+    KHATA_TRANSACTIONS {
+        int id PK
+        int customerId FK
+        text type "credit | payment"
+        real amount
+        text description
+        text date
+        int syncStatus
+    }
+```
+
+### Key flows
+
+**Saving a bill** — one atomic SQLite transaction:
+
+```mermaid
+sequenceDiagram
+    actor Shopkeeper
+    participant UI as Billing screen
+    participant Repo as KhataRepository
+    participant DB as SQLite
+    Shopkeeper->>UI: Add items, pick payment method, Save Invoice
+    UI->>Repo: saveBill(items, paymentMethod, customer)
+    Repo->>Repo: subtotal + 13% VAT = total
+    Repo->>DB: BEGIN
+    Repo->>DB: INSERT bill (syncStatus = 0)
+    Repo->>DB: UPDATE inventory stockQty -= qty (never below 0)
+    alt payment = credit
+        Repo->>DB: INSERT khata_transaction (credit)
+        Repo->>DB: UPDATE customer balance += total
+    end
+    Repo->>DB: COMMIT
+    UI-->>Shopkeeper: Receipt → WhatsApp share / Print
+```
+
+**Cloud sync** — tap the *Online* indicator:
+
+1. `SyncService` reads bills and ledger entries with `syncStatus = 0`, plus all customers and products.
+2. Writes them to `shops/{uid}/{bills,transactions,customers,inventory}` in Firestore batches of 450
+   (Firestore's limit is 500 per batch).
+3. Marks the pushed bills and transactions as synced locally.
+
+**Login and sign-in alert**:
+
+1. User signs in with phone OTP, Google or Facebook through Firebase Auth.
+2. The app appends a record to `shops/{uid}/logins`.
+3. The `notifyLogin` Cloud Function (region `asia-south1`) fires and emails the account owner via
+   Gmail. Phone-only accounts have no email, so they are skipped.
+
+### Security
+
+- `firestore.rules` lets a signed-in user read/write only `shops/{their uid}/...`, limited to the
+  four data collections; login records are create-only.
+- Gmail credentials are stored as Cloud Functions secrets, never in the app.
+- The test OTP `123456` only works in debug builds or with `--dart-define=DEV_LOGIN=true`.
+
 ## Getting Started
 
 ### Prerequisites
@@ -148,11 +290,10 @@ Contributions are welcome. Feel free to open issues or submit pull requests for 
 
 Add your project license here if you want to define how others can use the code.
 
-## Image 
+## Screenshots
 
-<img width="404" height="845" alt="Screenshot 2026-07-02 at 12 20 59 PM" src="https://github.com/user-attachments/assets/68c5ccd7-9098-4d3f-b66c-cc481ac038c4" />
-<img width="412" height="843" alt="Screenshot 2026-07-02 at 12 26 30 PM" src="https://github.com/user-attachments/assets/79f3545f-2f70-48a8-a6b9-28b6fcad9780" />
-<img width="417" height="846" alt="Screenshot 2026-07-02 at 12 26 45 PM" src="https://github.com/user-attachments/assets/6e5001f5-577c-47b0-abf0-a86ab2c07b25" />
-<img width="424" height="858" alt="Screenshot 2026-07-02 at 12 27 10 PM" src="https://github.com/user-attachments/assets/8c83e1bc-3db4-4e69-9dee-7feff12c10f7" />
-<img width="416" height="856" alt="Screenshot 2026-07-02 at 12 27 31 PM" src="https://github.com/user-attachments/assets/c601e4b3-d5c0-475b-9613-88b464097467" />
-<img width="411" height="851" alt="Screenshot 2026-07-02 at 12 27 40 PM" src="https://github.com/user-attachments/assets/f8cb5ba8-7cb4-46d3-9e1c-b5ff77916a98" />
+| Login | Dashboard | Billing |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/login.png" width="250" alt="Login screen"> | <img src="docs/screenshots/dashboard.png" width="250" alt="Dashboard"> | <img src="docs/screenshots/billing.png" width="250" alt="Billing screen"> |
+| **Invoice receipt** | **Inventory** | **Khata (credit)** |
+| <img src="docs/screenshots/receipt.png" width="250" alt="Invoice receipt"> | <img src="docs/screenshots/inventory.png" width="250" alt="Inventory"> | <img src="docs/screenshots/khata.png" width="250" alt="Khata ledger"> |
