@@ -11,6 +11,24 @@ const DB_KEYS = {
   LOANS: "sajilokhata_loans"
 };
 
+// Each account has its own products, customers, khata entries, bills, loans
+// and sync queue (e.g. "sajilokhata_products::9800000000"), and a new account
+// starts empty. Only the login session is shared on this device.
+const ACCOUNT_KEYS = ["PRODUCTS", "CUSTOMERS", "TRANSACTIONS", "BILLS", "LOANS", "SYNC_QUEUE"];
+
+function accountId() {
+  try {
+    const session = JSON.parse(localStorage.getItem(DB_KEYS.SESSION));
+    return (session && session.phone) || "guest";
+  } catch {
+    return "guest";
+  }
+}
+
+function key(name) {
+  return ACCOUNT_KEYS.includes(name) ? `${DB_KEYS[name]}::${accountId()}` : DB_KEYS[name];
+}
+
 // Initial Nepalese shop seed data
 const SEED_PRODUCTS = [
   { id: "p1", name: "Jira Masino Chamal (25kg)", category: "Groceries", stockQty: 12, buyingPrice: 2100, sellingPrice: 2450, minThreshold: 3 },
@@ -73,26 +91,8 @@ const SEED_LOANS = [
 ];
 
 export const db = {
-  init() {
-    if (!localStorage.getItem(DB_KEYS.PRODUCTS)) {
-      localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(SEED_PRODUCTS));
-    }
-    if (!localStorage.getItem(DB_KEYS.CUSTOMERS)) {
-      localStorage.setItem(DB_KEYS.CUSTOMERS, JSON.stringify(SEED_CUSTOMERS));
-    }
-    if (!localStorage.getItem(DB_KEYS.TRANSACTIONS)) {
-      localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(SEED_TRANSACTIONS));
-    }
-    if (!localStorage.getItem(DB_KEYS.BILLS)) {
-      localStorage.setItem(DB_KEYS.BILLS, JSON.stringify(SEED_BILLS));
-    }
-    if (!localStorage.getItem(DB_KEYS.SYNC_QUEUE)) {
-      localStorage.setItem(DB_KEYS.SYNC_QUEUE, JSON.stringify([]));
-    }
-    if (!localStorage.getItem(DB_KEYS.LOANS)) {
-      localStorage.setItem(DB_KEYS.LOANS, JSON.stringify(SEED_LOANS));
-    }
-  },
+  // Nothing to seed: every account starts empty and lists default to []
+  init() {},
 
   // --- Auth Session ---
   getSession() {
@@ -112,7 +112,7 @@ export const db = {
 
   // --- Products (Inventory) ---
   getProducts() {
-    return JSON.parse(localStorage.getItem(DB_KEYS.PRODUCTS)) || [];
+    return JSON.parse(localStorage.getItem(key("PRODUCTS"))) || [];
   },
 
   saveProduct(product) {
@@ -128,7 +128,7 @@ export const db = {
       product.id = "p_" + Date.now();
       products.push(product);
     }
-    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(products));
+    localStorage.setItem(key("PRODUCTS"), JSON.stringify(products));
     this.addToSyncQueue("products", product);
     return product;
   },
@@ -138,14 +138,14 @@ export const db = {
     const product = products.find(p => p.id === productId);
     if (product) {
       product.stockQty = Math.max(0, newQty);
-      localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(products));
+      localStorage.setItem(key("PRODUCTS"), JSON.stringify(products));
       this.addToSyncQueue("products", product);
     }
   },
 
   // --- Customers (Khata) ---
   getCustomers() {
-    return JSON.parse(localStorage.getItem(DB_KEYS.CUSTOMERS)) || [];
+    return JSON.parse(localStorage.getItem(key("CUSTOMERS"))) || [];
   },
 
   saveCustomer(customer) {
@@ -160,14 +160,14 @@ export const db = {
       customer.balance = 0;
       customers.push(customer);
     }
-    localStorage.setItem(DB_KEYS.CUSTOMERS, JSON.stringify(customers));
+    localStorage.setItem(key("CUSTOMERS"), JSON.stringify(customers));
     this.addToSyncQueue("customers", customer);
     return customer;
   },
 
   // --- Transactions (Khata Credit Ledger) ---
   getTransactions(customerId = null) {
-    const txs = JSON.parse(localStorage.getItem(DB_KEYS.TRANSACTIONS)) || [];
+    const txs = JSON.parse(localStorage.getItem(key("TRANSACTIONS"))) || [];
     if (customerId) {
       return txs.filter(t => t.customerId === customerId).sort((a, b) => new Date(b.date) - new Date(a.date));
     }
@@ -187,7 +187,7 @@ export const db = {
     // Save transaction
     const txs = this.getTransactions();
     txs.push(tx);
-    localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(txs));
+    localStorage.setItem(key("TRANSACTIONS"), JSON.stringify(txs));
 
     // Update Customer Balance
     const customers = this.getCustomers();
@@ -198,7 +198,7 @@ export const db = {
       } else {
         customer.balance -= tx.amount;
       }
-      localStorage.setItem(DB_KEYS.CUSTOMERS, JSON.stringify(customers));
+      localStorage.setItem(key("CUSTOMERS"), JSON.stringify(customers));
       this.addToSyncQueue("customers", customer);
     }
 
@@ -208,7 +208,7 @@ export const db = {
 
   // --- Billing ---
   getBills() {
-    const bills = JSON.parse(localStorage.getItem(DB_KEYS.BILLS)) || [];
+    const bills = JSON.parse(localStorage.getItem(key("BILLS"))) || [];
     return bills.sort((a, b) => new Date(b.date) - new Date(a.date));
   },
 
@@ -219,7 +219,7 @@ export const db = {
     // Add bill
     const bills = this.getBills();
     bills.push(bill);
-    localStorage.setItem(DB_KEYS.BILLS, JSON.stringify(bills));
+    localStorage.setItem(key("BILLS"), JSON.stringify(bills));
 
     // Deduct stock for items
     const products = this.getProducts();
@@ -230,7 +230,7 @@ export const db = {
         this.addToSyncQueue("products", product);
       }
     });
-    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(products));
+    localStorage.setItem(key("PRODUCTS"), JSON.stringify(products));
 
     // If payment method is Credit, record a transaction in Khata Ledger
     if (bill.paymentMethod === "credit" && bill.customerId) {
@@ -280,7 +280,7 @@ export const db = {
 
   // --- Sync Simulation ---
   getSyncQueue() {
-    return JSON.parse(localStorage.getItem(DB_KEYS.SYNC_QUEUE)) || [];
+    return JSON.parse(localStorage.getItem(key("SYNC_QUEUE"))) || [];
   },
 
   addToSyncQueue(collection, data) {
@@ -291,7 +291,7 @@ export const db = {
       data,
       timestamp: new Date().toISOString()
     });
-    localStorage.setItem(DB_KEYS.SYNC_QUEUE, JSON.stringify(queue));
+    localStorage.setItem(key("SYNC_QUEUE"), JSON.stringify(queue));
   },
 
   async processSyncQueue(onProgress) {
@@ -305,13 +305,13 @@ export const db = {
     }
 
     // Clear sync queue on completion
-    localStorage.setItem(DB_KEYS.SYNC_QUEUE, JSON.stringify([]));
+    localStorage.setItem(key("SYNC_QUEUE"), JSON.stringify([]));
     return true;
   },
 
   // --- Loans (Sathi Rin / Shopkeeper P2P) ---
   getLoans() {
-    return JSON.parse(localStorage.getItem(DB_KEYS.LOANS)) || [];
+    return JSON.parse(localStorage.getItem(key("LOANS"))) || [];
   },
 
   saveLoan(loan) {
@@ -325,7 +325,7 @@ export const db = {
       loan.status = "active";
       loans.push(loan);
     }
-    localStorage.setItem(DB_KEYS.LOANS, JSON.stringify(loans));
+    localStorage.setItem(key("LOANS"), JSON.stringify(loans));
     this.addToSyncQueue("loans", loan);
     return loan;
   },
@@ -350,7 +350,7 @@ export const db = {
       loan.status = "repaid";
     }
 
-    localStorage.setItem(DB_KEYS.LOANS, JSON.stringify(loans));
+    localStorage.setItem(key("LOANS"), JSON.stringify(loans));
     this.addToSyncQueue("loans", loan);
     return repayment;
   },
@@ -388,11 +388,11 @@ export const db = {
 
   // Clean data reset for tests
   resetData() {
-    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(SEED_PRODUCTS));
-    localStorage.setItem(DB_KEYS.CUSTOMERS, JSON.stringify(SEED_CUSTOMERS));
-    localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(SEED_TRANSACTIONS));
-    localStorage.setItem(DB_KEYS.BILLS, JSON.stringify(SEED_BILLS));
-    localStorage.setItem(DB_KEYS.LOANS, JSON.stringify(SEED_LOANS));
-    localStorage.setItem(DB_KEYS.SYNC_QUEUE, JSON.stringify([]));
+    localStorage.setItem(key("PRODUCTS"), JSON.stringify(SEED_PRODUCTS));
+    localStorage.setItem(key("CUSTOMERS"), JSON.stringify(SEED_CUSTOMERS));
+    localStorage.setItem(key("TRANSACTIONS"), JSON.stringify(SEED_TRANSACTIONS));
+    localStorage.setItem(key("BILLS"), JSON.stringify(SEED_BILLS));
+    localStorage.setItem(key("LOANS"), JSON.stringify(SEED_LOANS));
+    localStorage.setItem(key("SYNC_QUEUE"), JSON.stringify([]));
   }
 };

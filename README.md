@@ -224,6 +224,21 @@ package version in `pubspec.lock`; if they differ, the app shows a blank page.
      `android/app/src/main/res/values/strings.xml` and `ios/Runner/Info.plist` (replace
      `000000000000000`), then build with `--dart-define=FACEBOOK_LOGIN=true`.
 
+#### Google and Facebook login in the web prototype
+
+The web prototype (`index.html`, served by `npm run dev`) uses the same Firebase project.
+
+1. In the Firebase console, add a **Web app** under **Project settings > Your apps** and copy its config.
+2. `cp .env.example .env.local` and fill in the `VITE_FIREBASE_*` values. Restart `npm run dev`.
+3. Enable **Google** and **Facebook** in **Authentication > Sign-in method** (Facebook uses the same
+   Meta app, App ID and App Secret as above, with Firebase's redirect URI added to the Meta app).
+4. Add the domains you serve from (for example your Firebase Hosting domain) under
+   **Authentication > Settings > Authorized domains**. `localhost` is allowed by default.
+
+Without `.env.local` the login buttons open sample-account pickers and the login card shows a
+"Demo mode" note. With it, they open the real Google / Facebook popups, and each sign-in is recorded
+in `shops/{uid}/logins` so the sign-in alert email below is sent for web logins too.
+
 Synced data is written to `shops/{uid}/{bills,transactions,customers,inventory}`. Tap the Online
 indicator in the app bar to sync.
 

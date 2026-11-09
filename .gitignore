@@ -13,3 +13,7 @@ build/
 # IDE
 .idea/
 .vscode/
+
+# Local env (Firebase web keys)
+.env.local
+.env.*.local

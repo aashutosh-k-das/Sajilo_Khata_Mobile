@@ -58,6 +58,26 @@ export const locales = {
     lowStock: "न्यून मौज्दात",
     outOfStock: "सकियो",
     editStock: "मौज्दात सम्पादन",
+    editProduct: "सामान सम्पादन",
+    updateProduct: "परिवर्तन सुरक्षित गर्नुहोस्",
+    done: "सम्पन्न",
+    historyNav: "इतिहास",
+    noProducts: "कुनै सामान छैन। + थिचेर नयाँ सामान थप्नुहोस्",
+    inventoryNav: "मौज्दात",
+    khataNav: "खाता",
+    salesHistory: "बिक्री इतिहास",
+    filterToday: "आज",
+    filterWeek: "७ दिन",
+    filterAll: "सबै",
+    totalSales: "कुल बिक्री",
+    billsLabel: "बिल",
+    searchBill: "ग्राहक वा बिल नं. खोज्नुहोस्...",
+    noBills: "यो अवधिमा कुनै बिल छैन",
+    yesterday: "हिजो",
+    itemsLabel: "सामान",
+    payCash: "नगद",
+    payCredit: "उधारो",
+    payOnline: "eSewa/QR",
     updateStock: "मौज्दात अपडेट",
 
     // Khata
@@ -94,7 +114,9 @@ export const locales = {
     enterOtp: "६-अङ्कको OTP कोड हाल्नुहोस्",
     mockOtpSent: "तपाईंको नम्बरमा OTP पठाइएको छ! (विकासकर्ता परीक्षणको लागि ६-अङ्क: १२३४५६ प्रयोग गर्नुहोस्)",
     or: "वा",
-    loginGmail: "Gmail बाट लगइन गर्नुहोस्"
+    loginGmail: "Gmail बाट लगइन गर्नुहोस्",
+    loginFacebook: "Facebook बाट लगइन गर्नुहोस्",
+    authDemoNote: "डेमो मोड: Firebase सेटअप नभएसम्म नक्कली खाताबाट लगइन हुन्छ"
   },
   en: {
     appName: "Sajilo Khata",
@@ -154,6 +176,26 @@ export const locales = {
     lowStock: "Low Stock",
     outOfStock: "Out of Stock",
     editStock: "Edit Stock",
+    editProduct: "Edit Product",
+    updateProduct: "Save Changes",
+    done: "Done",
+    historyNav: "History",
+    noProducts: "No products yet. Tap + to add one",
+    inventoryNav: "Stock",
+    khataNav: "Khata",
+    salesHistory: "Sales History",
+    filterToday: "Today",
+    filterWeek: "7 days",
+    filterAll: "All",
+    totalSales: "Total sales",
+    billsLabel: "bills",
+    searchBill: "Search customer or bill no...",
+    noBills: "No bills in this period",
+    yesterday: "Yesterday",
+    itemsLabel: "items",
+    payCash: "Cash",
+    payCredit: "Credit",
+    payOnline: "eSewa/QR",
     updateStock: "Update Stock",
 
     // Khata
@@ -190,6 +232,8 @@ export const locales = {
     enterOtp: "Enter 6-digit OTP code",
     mockOtpSent: "OTP sent to your number! (For testing, use code: 123456)",
     or: "OR",
-    loginGmail: "Login with Gmail"
+    loginGmail: "Login with Gmail",
+    loginFacebook: "Login with Facebook",
+    authDemoNote: "Demo mode: until Firebase is set up, login uses sample accounts"
   }
 };

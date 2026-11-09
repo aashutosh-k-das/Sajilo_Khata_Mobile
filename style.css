@@ -430,11 +430,13 @@ body {
   font-size: 12px;
   font-weight: 600;
   transition: color 0.2s;
+  min-width: 0;
+  white-space: nowrap; /* five tabs: keep every label on one line */
 }
 
 .nav-icon {
   font-size: 22px;
-  width: 60px;
+  width: 52px;
   height: 32px;
   display: flex;
   align-items: center;
@@ -908,6 +910,23 @@ body {
   background-color: var(--primary-bg);
 }
 
+.btn-outline:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Second social login button sits just under the Gmail one */
+.btn-social {
+  margin-top: 10px;
+}
+
+.auth-demo-note {
+  margin-top: 12px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--warning-color);
+}
+
 .btn-row {
   display: flex;
   gap: 10px;
@@ -1219,6 +1238,85 @@ dialog[open]::backdrop {
 .badge-success { background-color: rgba(18, 161, 80, 0.13); color: var(--success-color); }
 .badge-danger { background-color: rgba(229, 72, 77, 0.13); color: var(--danger-color); }
 .badge-warning { background-color: rgba(245, 158, 11, 0.16); color: var(--warning-color); }
+.badge-info { background-color: rgba(59, 130, 246, 0.13); color: var(--info-color); }
+
+/* ---------- Sales History ---------- */
+.filter-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.chip {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.chip.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+.history-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-radius: var(--radius-md);
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-brand);
+}
+
+.history-summary-label {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.history-summary-value {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.history-summary-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+}
+
+.history-summary-count span:first-child {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.history-day {
+  margin: 6px 2px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.bill-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
 
 /* QR Modal Container */
 .qr-container {

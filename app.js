@@ -1,12 +1,14 @@
 import { db } from './db.js';
 import { locales } from './locales.js';
 import { sparrowSMS } from './sparrow_sms.js';
+import * as auth from './auth.js';
 
 // Global application state
 let currentLanguage = 'ne'; // default to Nepali
 let isOnline = true;
 let activeCart = [];
 let selectedCustomerForDetail = null;
+let historyPeriod = 'today'; // 'today' | 'week' | 'all'
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
@@ -60,6 +62,10 @@ function navigateToPage(pageId) {
     targetPage.classList.add('active');
   }
 
+  // Start each page from the top instead of keeping the previous scroll offset
+  const appBody = document.querySelector('.app-body');
+  if (appBody) appBody.scrollTop = 0;
+
   // Update nav item active status
   document.querySelectorAll('.nav-item').forEach(nav => {
     nav.classList.remove('active');
@@ -77,6 +83,8 @@ function navigateToPage(pageId) {
     renderInventoryScreen();
   } else if (pageId === 'page-khata') {
     renderKhataScreen();
+  } else if (pageId === 'page-history') {
+    renderHistoryScreen();
   }
 }
 
@@ -103,7 +111,8 @@ function checkAuthSession() {
 
     navigateToPage('page-dashboard');
   } else {
-    authSection.classList.add('active');
+    // Hide every other page (e.g. the dashboard after logout) and show login
+    navigateToPage(authSection.id);
     appHeader.style.display = 'none';
     appNav.style.display = 'none';
   }
@@ -204,7 +213,11 @@ function setupEventListeners() {
   
   // Logout
   document.getElementById('logout-btn').addEventListener('click', () => {
+    auth.signOut().catch(e => console.warn('Firebase sign-out failed:', e));
     db.clearSession();
+    // Don't carry the previous account's cart or open customer into the next login
+    activeCart = [];
+    selectedCustomerForDetail = null;
     checkAuthSession();
     showToast('Logged out successfully');
   });
@@ -237,40 +250,73 @@ function setupEventListeners() {
     }
   });
 
-  // Auth Gmail flow
-  document.getElementById('auth-gmail-btn').addEventListener('click', () => {
-    document.getElementById('dialog-google-auth').showModal();
+  // Social login (Google / Facebook)
+  // Real Firebase popups when configured, otherwise a labelled demo picker.
+  document.getElementById('auth-demo-note').hidden = auth.firebaseReady;
+
+  const finishSocialLogin = (id, providerLabel) => {
+    showToast(currentLanguage === 'ne' ? `${providerLabel} बाट लगइन गर्दै...` : `Authenticating with ${providerLabel}...`);
+    setTimeout(() => {
+      db.setSession(id);
+      checkAuthSession();
+      showToast(currentLanguage === 'ne' ? 'लगइन सफल भयो' : 'Logged in successfully');
+    }, 800);
+  };
+
+  const socialButtons = [
+    { btnId: 'auth-gmail-btn', provider: 'google', label: 'Google', demoDialog: 'dialog-google-auth' },
+    { btnId: 'auth-facebook-btn', provider: 'facebook', label: 'Facebook', demoDialog: 'dialog-facebook-auth' },
+  ];
+  socialButtons.forEach(({ btnId, provider, label, demoDialog }) => {
+    const btn = document.getElementById(btnId);
+    btn.addEventListener('click', async () => {
+      if (!auth.firebaseReady) {
+        document.getElementById(demoDialog).showModal();
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const user = await auth.signInWith(provider);
+        db.setSession(user.id);
+        checkAuthSession();
+        showToast(currentLanguage === 'ne' ? 'लगइन सफल भयो' : 'Logged in successfully');
+      } catch (err) {
+        console.warn(`${label} sign-in failed:`, err);
+        showToast(auth.authErrorMessage(err, currentLanguage), true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
   });
 
-  // Handle mock Google account selection
+  // Demo-mode account pickers
+  const askForEmail = () => {
+    const input = window.prompt('Enter your email address:', 'user@gmail.com');
+    return input && input.includes('@') ? input.trim() : null;
+  };
+
   document.querySelectorAll('#mock-google-accounts .list-item').forEach(item => {
     item.addEventListener('click', () => {
-      let email = item.getAttribute('data-email');
-      
-      if (!email && item.id === 'btn-mock-another-account') {
-        const input = window.prompt("Enter your email address:", "user@gmail.com");
-        if (!input || !input.includes('@')) return;
-        email = input;
-      }
-      
-      if (email) {
-        document.getElementById('dialog-google-auth').close();
-        showToast(currentLanguage === 'ne' ? 'Google बाट लगइन गर्दै...' : 'Authenticating with Google...');
-        
-        setTimeout(() => {
-          db.setSession(email);
-          checkAuthSession();
-          showToast(currentLanguage === 'ne' ? 'लगइन सफल भयो' : 'Logged in successfully');
-        }, 800);
-      }
+      const email = item.id === 'btn-mock-another-account' ? askForEmail() : item.getAttribute('data-email');
+      if (!email) return;
+      document.getElementById('dialog-google-auth').close();
+      finishSocialLogin(email, 'Google');
+    });
+  });
+
+  document.querySelectorAll('#mock-facebook-accounts button').forEach(item => {
+    item.addEventListener('click', () => {
+      const email = item.id === 'btn-mock-facebook-other' ? askForEmail() : item.getAttribute('data-email');
+      if (!email) return;
+      document.getElementById('dialog-facebook-auth').close();
+      finishSocialLogin(email, 'Facebook');
     });
   });
 
   // Quick Action triggers
   document.getElementById('action-new-sale').addEventListener('click', () => navigateToPage('page-billing'));
   document.getElementById('action-new-product').addEventListener('click', () => {
-    document.getElementById('add-product-form').reset();
-    document.getElementById('dialog-add-product').showModal();
+    openProductForm();
   });
   document.getElementById('action-new-customer').addEventListener('click', () => {
     document.getElementById('add-customer-form').reset();
@@ -285,8 +331,7 @@ function setupEventListeners() {
 
   // Trigger Add dialogs from lists
   document.getElementById('btn-inventory-add-product').addEventListener('click', () => {
-    document.getElementById('add-product-form').reset();
-    document.getElementById('dialog-add-product').showModal();
+    openProductForm();
   });
   document.getElementById('btn-khata-add-customer').addEventListener('click', () => {
     document.getElementById('add-customer-form').reset();
@@ -316,8 +361,9 @@ function setupEventListeners() {
     const buyingPrice = parseFloat(document.getElementById('prod-buying-input').value);
     const sellingPrice = parseFloat(document.getElementById('prod-selling-input').value);
     const minThreshold = parseInt(document.getElementById('prod-threshold-input').value);
+    const id = document.getElementById('prod-id-input').value || undefined;
 
-    db.saveProduct({ name, category, stockQty, buyingPrice, sellingPrice, minThreshold });
+    db.saveProduct({ id, name, category, stockQty, buyingPrice, sellingPrice, minThreshold });
     document.getElementById('dialog-add-product').close();
     showToast(currentLanguage === 'ne' ? 'सामान सुरक्षित भयो' : 'Product saved');
     
@@ -333,6 +379,15 @@ function setupEventListeners() {
   document.getElementById('khata-search').addEventListener('input', (e) => {
     renderKhataScreen(e.target.value);
   });
+
+  // Sales history: period chips and search
+  document.querySelectorAll('#history-filters .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      historyPeriod = chip.getAttribute('data-period');
+      renderHistoryScreen();
+    });
+  });
+  document.getElementById('history-search').addEventListener('input', () => renderHistoryScreen());
 
   // Stock update adjustment form
   document.getElementById('adjust-stock-form').addEventListener('submit', (e) => {
@@ -743,7 +798,7 @@ function renderInventoryScreen(searchQuery = '') {
   });
 
   if (products.length === 0) {
-    list.innerHTML = emptyStateHtml('inventory_2', 'No products found.');
+    list.innerHTML = emptyStateHtml('inventory_2', locales[currentLanguage].noProducts);
     return;
   }
 
@@ -770,7 +825,7 @@ function renderInventoryScreen(searchQuery = '') {
     if (isLowStock) row.classList.add(isOutOfStock ? 'is-danger' : 'is-warning');
     
     row.addEventListener('click', () => {
-      openStockAdjustment(p.id);
+      openProductForm(p);
     });
 
     row.innerHTML = `
@@ -788,14 +843,123 @@ function renderInventoryScreen(searchQuery = '') {
   });
 }
 
-function openStockAdjustment(productId) {
-  const p = db.getProducts().find(item => item.id === productId);
-  if (p) {
-    document.getElementById('adjust-product-id').value = p.id;
-    document.getElementById('adjust-product-name').textContent = p.name;
-    document.getElementById('adjust-qty-input').value = p.stockQty;
-    document.getElementById('dialog-adjust-stock').showModal();
+// Opens the product dialog empty (add) or filled in with `product` (edit)
+function openProductForm(product = null) {
+  const form = document.getElementById('add-product-form');
+  form.reset();
+  const set = (id, value) => { document.getElementById(id).value = value; };
+  set('prod-id-input', product ? product.id : '');
+  if (product) {
+    set('prod-name-input', product.name);
+    set('prod-category-input', product.category);
+    set('prod-qty-input', product.stockQty);
+    set('prod-buying-input', product.buyingPrice);
+    set('prod-selling-input', product.sellingPrice);
+    set('prod-threshold-input', product.minThreshold);
   }
+
+  // Switch title and button text between add and edit
+  const trans = locales[currentLanguage];
+  const title = document.getElementById('addProdTitle');
+  const submit = document.getElementById('prod-submit-btn');
+  title.setAttribute('data-locale', product ? 'editProduct' : 'addProduct');
+  submit.setAttribute('data-locale', product ? 'updateProduct' : 'saveProduct');
+  title.textContent = trans[title.getAttribute('data-locale')];
+  submit.textContent = trans[submit.getAttribute('data-locale')];
+
+  document.getElementById('dialog-add-product').showModal();
+}
+
+// 5. Sales History View
+const PAYMENT_BADGES = {
+  cash: { cls: 'badge-success', key: 'payCash', icon: 'payments', tone: 'green' },
+  credit: { cls: 'badge-warning', key: 'payCredit', icon: 'account_balance_wallet', tone: 'amber' },
+  online: { cls: 'badge-info', key: 'payOnline', icon: 'qr_code_2', tone: 'blue' },
+};
+
+function escapeHtml(text) {
+  return String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// "Today", "Yesterday" or a date like "Mon 2 Nov"
+function dayHeading(date, trans) {
+  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000);
+  if (diffDays === 0) return trans.filterToday;
+  if (diffDays === 1) return trans.yesterday;
+  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function renderHistoryScreen() {
+  const trans = locales[currentLanguage];
+  const list = document.getElementById('history-list');
+  const query = document.getElementById('history-search').value.trim().toLowerCase();
+
+  document.querySelectorAll('#history-filters .chip').forEach(chip => {
+    const active = chip.getAttribute('data-period') === historyPeriod;
+    chip.classList.toggle('active', active);
+    chip.setAttribute('aria-selected', active);
+  });
+
+  // Bills come back newest first
+  const today = startOfDay(new Date());
+  const from = historyPeriod === 'today' ? today
+    : historyPeriod === 'week' ? new Date(today.getTime() - 6 * 86400000)
+    : null;
+  const bills = db.getBills().filter(b => {
+    if (from && new Date(b.date) < from) return false;
+    if (!query) return true;
+    return (b.customerName || '').toLowerCase().includes(query) || b.id.toLowerCase().includes(query);
+  });
+
+  const total = bills.reduce((sum, b) => sum + b.total, 0);
+  document.getElementById('history-total').textContent =
+    `रु. ${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  document.getElementById('history-count').textContent = bills.length;
+
+  list.innerHTML = '';
+  if (bills.length === 0) {
+    list.innerHTML = emptyStateHtml('history', trans.noBills);
+    return;
+  }
+
+  let lastHeading = null;
+  bills.forEach(bill => {
+    const date = new Date(bill.date);
+    const heading = dayHeading(date, trans);
+    if (heading !== lastHeading) {
+      const h = document.createElement('div');
+      h.className = 'history-day';
+      h.textContent = heading;
+      list.appendChild(h);
+      lastHeading = heading;
+    }
+
+    const pay = PAYMENT_BADGES[bill.paymentMethod] || PAYMENT_BADGES.cash;
+    const itemCount = bill.items.reduce((n, i) => n + i.qty, 0);
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    row.addEventListener('click', () => showInvoiceReceipt(bill));
+    row.innerHTML = `
+      <span class="icon-badge tone-${pay.tone}"><span class="mi">${pay.icon}</span></span>
+      <div class="item-left">
+        <span class="item-title">${escapeHtml(bill.customerName)}</span>
+        <span class="item-subtitle">${time} • ${itemCount} ${trans.itemsLabel} • #${escapeHtml(bill.id.substring(0, 8).toUpperCase())}</span>
+      </div>
+      <div class="item-right bill-col">
+        <span>रु. ${bill.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+        <span class="badge-status ${pay.cls}">${trans[pay.key]}</span>
+      </div>
+    `;
+    list.appendChild(row);
+  });
 }
 
 // 4. Khata View
@@ -935,6 +1099,10 @@ function showInvoiceReceipt(bill) {
                     bill.items.map(i => `- ${i.name} (Qty: ${i.qty})`).join('\n');
     const encoded = encodeURIComponent(textMsg);
     window.open(`https://wa.me/?text=${encoded}`, '_blank');
+  };
+
+  document.getElementById('btn-invoice-done').onclick = () => {
+    document.getElementById('dialog-invoice-receipt').close();
   };
 
   const printBtn = document.getElementById('btn-invoice-print');
